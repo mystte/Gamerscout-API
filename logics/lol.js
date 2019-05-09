@@ -301,8 +301,7 @@ var romanToNumber = function(romanNumber) {
 
 var getLeagueIconUrl = function(tier, rank) {
   const image = (tier === 'grandmaster') ? 'grandmaster.png' : tier + '_' + rank + '.png';
-  const path = '/static/images/lol_ranking_icons/';
-  return path + image;
+  return image;
 }
 
 var sortStatsResultArray = function(rankedArray) {
