@@ -1,0 +1,81 @@
+{
+	"version": "0.9.1",
+	"api_base_url" : "",
+	"api_base_port" : 8002,
+	"lol_api" : {
+		"api_key_dev": "RGAPI-10698cc7-9ea4-457a-b393-8ffe540bc02c",
+		"api_key_prod": "RGAPI-0dd13b3c-dca9-4584-a3ec-0a8723d186dc",
+		"api_key": "RGAPI-c8a4fa10-f207-4449-b6fb-35cfce91ce61",
+		"legacy_version": "v3",
+		"version": "v4"
+	},
+	"mongodb" : "mongodb://localhost:",
+	"mongodb_port" : "27017",
+	"mongo_user" : "gs",
+	"mongo_pwd": "ZaXsCdVfBgNh43",
+	"project_name" : "gs-api",
+	"facebook" : {
+		"prod": {
+			"appId": "1575376835882846",
+			"appSecret": "5138d0d15649dfe92e65dfdd43132e11"
+		},
+		"dev": {
+			"appId": "1823676284348269",
+			"appSecret": "27a5955c4e5b046683248f5c51523611"
+		}
+	},
+	"facebook_url": "https://graph.facebook.com/",
+	"facebook_url_profile": "me?debug=all&fields=id%2Cname%2Cemail%2Cbirthday%2Cgender%2Cfirst_name%2Clast_name&format=json&method=get&pretty=0&suppress_http_code=1&access_token=",
+	"facebook_url_picture": "/picture?debug=all&format=json&method=get&pretty=0&redirect=false&suppress_http_code=1&width=360&access_token=",
+	"smtp_email": "team@gamerscout.com",
+	"smtp_password": "UHQd%O9lO903",
+	"client": {
+		"dev": {
+			"url": "localhost:3333"
+		},
+		"prod": {
+			"url": "gamerscout.com"
+		},
+		"staging": {
+			"url": "dev.gamerscout.com"
+		}
+	},
+	"supported_platforms": [
+		{
+			"name": "lol",
+			"enabled": true,
+			"icon-url": "/static/images/platforms/lol.svg"
+		},
+		{
+			"name": "steam",
+			"enabled": false,
+			"icon-url": "/static/images/platforms/coming-soon/steam.svg"
+		},
+		{
+			"name": "origin",
+			"enabled": false,
+			"icon-url": "/static/images/platforms/coming-soon/origin.svg"
+		},
+		{
+			"name": "epic",
+			"enabled": false,
+			"icon-url": "/static/images/platforms/coming-soon/epic.svg"
+		},
+		{
+			"name": "battlenet",
+			"enabled": false,
+			"icon-url": "/static/images/platforms/coming-soon/battlenet.svg"
+		},
+		{
+			"name": "xbox",
+			"enabled": false,
+			"icon-url": "/static/images/platforms/coming-soon/xbox.svg"
+		},
+		{
+			"name": "sony",
+			"enabled": false,
+			"icon-url": "/static/images/platforms/coming-soon/sony.svg"
+		}
+	],
+  "expiration_delay": "5"
+}

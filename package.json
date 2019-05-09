@@ -1,0 +1,39 @@
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "apicache": "^1.4.0",
+    "async": "^2.6.2",
+    "axios": "^0.18.0",
+    "bcrypt": "^3.0.6",
+    "body-parser": "^1.19.0",
+    "connect-redis": "^3.4.1",
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "debug": "^4.1.1",
+    "email-check": "^1.1.0",
+    "express": "^4.16.4",
+    "express-flash": "0.0.2",
+    "express-session": "^1.16.1",
+    "ipware": "2.0.0",
+    "jade": "~1.11.0",
+    "md5": "^2.2.1",
+    "mongoose": "^5.5.6",
+    "mongoose-paginate": "^5.0.3",
+    "morgan": "^1.9.1",
+    "multer": "^1.4.1",
+    "node-twitter-api": "^1.8.0",
+    "nodemailer": "^6.1.1",
+    "q": "^1.5.1",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.4",
+    "riot-games-api-nodejs": "~1.0.7",
+    "serve-favicon": "^2.5.0",
+    "slack": "^11.0.2",
+    "sync-each": "^1.0.1"
+  }
+}

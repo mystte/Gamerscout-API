@@ -1,0 +1,26 @@
+extends layout
+block content
+  #top-header
+    h1.main-title gamerscout
+  #reset-pwd-section
+    h2.reset-pwd-title Change Password
+  #reset-pwd-container
+    h3.reset-pwd-form-title Password
+    h4.reset-pwd-form-subtitle Must be at least 6 characters long.
+    form(method='POST')
+      .form-group
+        input.form-control.pwd1(type='password', name='password', value='', placeholder='new password', autofocus=true, required)
+      .form-group
+        input.form-control.pwd2(type='password', name='confirm', value='', placeholder='confirm password', required)
+      .form-group
+        button.btn.btn-primary.reset-pwd-form-submit(type='submit') Change password
+      if length_error
+        .alert.alert-danger(role='alert')
+            span.glyphicon.glyphicon-exclamation-sign(aria-hidden='true')
+            span.sr-only Error:
+            |   Password must be a least 6 characters
+      else if match_error
+        .alert.alert-danger(role='alert')
+              span.glyphicon.glyphicon-exclamation-sign(aria-hidden='true')
+              span.sr-only Error:
+              |   Passwords must be the same
