@@ -12,7 +12,7 @@ var constants = require('../utils/constants');
 const regions = {
   na : "na1",
   br : "br1",
-  eune : "eun1",
+  eue : "eun1",
   euw : "euw1",
   kr : "kr",
   lan : "la1",
@@ -41,18 +41,6 @@ const regions_short = () => {
     result.push(key);
   });
   return result;
-}
-
-var findIp = function(arr, search) {
-  var res = -1;
-  var len = arr.length;
-  while( len-- ) {
-      if(arr[len].toString() === search.toString()) {
-          res = len;
-          return len;         
-      }
-  }
-  return -1;
 }
 
 function orderByOccurrence(arr) {
@@ -117,13 +105,15 @@ var getOverallRating = function(reviews) {
 
 // Generate the request for the lol api
 var lolRequestGetSummonerByGamertag = function(region, username, json) {
-  var url = "https://" + region + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/by-name/" + username + "?api_key=" + constants.LOL_API_KEY;
+  const lolRegion = regions[region];
+  var url = "https://" + lolRegion + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/by-name/" + username + "?api_key=" + constants.LOL_API_KEY;
   console.log(url);
   return Q().then(function() {
     return request(url);
   }).then(function(body) {
     var data = JSON.parse(body);
-    data.platform = regions_verbose[region.toLowerCase()];
+    data.platform = 'riot';
+    data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
     json.push(data);
@@ -135,13 +125,15 @@ var lolRequestGetSummonerByGamertag = function(region, username, json) {
 }
 
 var lolRequestGetSummonerByGamerId = function (region, gamerId, json) {
-  var url = "https://" + region + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/" + gamerId + "?api_key=" + constants.LOL_API_KEY;
+  const lolRegion = regions[region];
+  var url = "https://" + lolRegion + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/" + gamerId + "?api_key=" + constants.LOL_API_KEY;
   console.log(url);
   return Q().then(function () {
     return request(url);
   }).then(function (body) {
     var data = JSON.parse(body);
-    data.platform = regions_verbose[region.toLowerCase()];
+    data.platform = 'riot';
+    data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
     json.push(data);
@@ -399,6 +391,7 @@ var getPlayedChampionsFromData = async function(data) {
 }
 
 var lolRequestGetStatsForGamer = async function(region, gamerId, accountId) {
+  const lolRegion = regions[region];
   var stats = {
     ranked: [],
     frequent_champions: [],
@@ -411,8 +404,8 @@ var lolRequestGetStatsForGamer = async function(region, gamerId, accountId) {
     },
   };
   try {
-    var urlRanking = "https://" + region + ".api.riotgames.com/lol/league/" + config.lol_api.version + "/positions/by-summoner/" + gamerId + "?api_key=" + constants.LOL_API_KEY;
-    var urlMatches = "https://" + region + ".api.riotgames.com/lol/match/" + config.lol_api.version + "/matchlists/by-account/" + accountId + "?api_key=" + constants.LOL_API_KEY;
+    var urlRanking = "https://" + lolRegion + ".api.riotgames.com/lol/league/" + config.lol_api.version + "/positions/by-summoner/" + gamerId + "?api_key=" + constants.LOL_API_KEY;
+    var urlMatches = "https://" + lolRegion + ".api.riotgames.com/lol/match/" + config.lol_api.version + "/matchlists/by-account/" + accountId + "?api_key=" + constants.LOL_API_KEY;
 
     var rankingPromise = axios.get(urlRanking);
     var matchesPromise = axios.get(urlMatches);

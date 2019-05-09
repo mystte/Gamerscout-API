@@ -198,9 +198,12 @@ router.get('/email_validation/:email', function(req, res, next) {
 });
 
 // Search a specific usertag based on the platform
-router.get('/search/:platform/:region/:gamertag', function(req, res, next) {
+// For now we force league of legends but we'll have to refactor this once
+// we want to implement more of them
+router.get('/search/:platform/:region/:game/:gamertag', function(req, res, next) {
   const loggedInuserId = (req.session._id) ? req.session._id : null;
   var platform = req.params.platform ? req.params.platform.toLowerCase() : null;
+  var game = req.params.game ? req.params.game.toLowerCase() : null;
   var gamertag = req.params.gamertag ? req.params.gamertag.toLowerCase() : null;
   var region = req.params.region ? req.params.region.toLowerCase() : null;
   var query_limit = req.query.limit ? +req.query.limit : 5;
