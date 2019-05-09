@@ -300,7 +300,7 @@ var romanToNumber = function(romanNumber) {
 }
 
 var getLeagueIconUrl = function(tier, rank) {
-  const image = (tier === 'grandmaster') ? 'grandmaster.png' : tier + '_' + rank + '.png';
+  const image = (tier === 'grandmaster') ? 'grandmaster' : tier + '_' + rank;
   return image;
 }
 
