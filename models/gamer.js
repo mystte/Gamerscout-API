@@ -4,6 +4,7 @@ var mongoose = require('mongoose')
 var gamerSchema = new Schema({
 	ips: { type: Array },
 	game: {type: String, required: true},
+	game_code: {type: String, required: true},
 	level: { type: Number },
 	gamer_id: { type: String },
 	account_id: {type: String},

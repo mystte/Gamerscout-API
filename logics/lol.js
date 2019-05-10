@@ -116,6 +116,7 @@ var lolRequestGetSummonerByGamertag = function(region, username, json) {
     data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
+    data.game_code = "LOL";
     json.push(data);
     return json;
   }).catch(function (err) {
@@ -136,6 +137,7 @@ var lolRequestGetSummonerByGamerId = function (region, gamerId, json) {
     data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
+    data.game_code = "LOL";
     json.push(data);
     return json;
   }).catch(function (err) {
@@ -161,6 +163,7 @@ var createLolGamersInDB = function(json) {
       account_id : json[i].accountId,
       last_update: json[i].revisionDate,
       game : json[i].game,
+      game_code: json[i].game_code,
       stats: json[i].stats,
       top_tags: [],
       reviews: [],
