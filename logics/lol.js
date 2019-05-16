@@ -425,16 +425,30 @@ var lolRequestGetStatsForGamer = async function(region, gamerId, accountId) {
   }
 }
 
+var checkEncryptedGamerId = async function(region, gamer) {
+  var url = "https://" + regions[region] + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/by-name/" + gamer.gamertag + "?api_key=" + constants.LOL_API_KEY;
+  const result = JSON.parse(await request(url));
+
+  if (result.id !== gamer.gamer_id) {
+    gamer.gamer_id = result.id;
+    gamer.account_id = result.accountId;
+  }
+  return gamer;
+}
+
 var refreshGamerData = async function(region, gamers) {
   for (var i = 0; i < gamers.length; i++) {
-    const gamer = gamers[i];
-    if (Date.now() - gamer.last_update > 3600000) {// refresh data if last refresh was made at least one hour ago
+    let gamer = gamers[i];
+    gamer = await checkEncryptedGamerId(region, gamer); // make sure we use the right encrypted key (in case we change api key)
+    if (Date.now() - gamer.last_update > 3600000 || !gamer.last_update) {// refresh data if last refresh was made at least one hour ago
       const updated_gamer = (await getLolAccountInRegionByGamerId(region, gamer.gamer_id))[0];
       gamer.last_update = Date.now();
       gamer.gamertag = updated_gamer.name;
       gamer.stats = updated_gamer.stats;
       gamer.level = updated_gamer.summonerLevel;
       gamer.gamer_id = updated_gamer.id;
+      gamer.game = updated_gamer.game;
+      gamer.game_code = updated_gamer.game_code;
       gamer.region = region.toLowerCase();;
       gamer.account_id = updated_gamer.accountId;
       gamer.profile_picture = getLolProfileIcon(updated_gamer.profileIconId);

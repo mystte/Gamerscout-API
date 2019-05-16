@@ -199,7 +199,7 @@ router.get('/email_validation/:email', function(req, res, next) {
 
 // Search a specific usertag based on the platform
 // For now we force league of legends but we'll have to refactor this once
-// we want to implement more of them
+// we want to implement more of them (it is also ugly af :/)
 router.get('/search/:platform/:region/:game/:gamertag', function(req, res, next) {
   const loggedInuserId = (req.session._id) ? req.session._id : null;
   var platform = req.params.platform ? req.params.platform.toLowerCase() : null;
@@ -214,8 +214,9 @@ router.get('/search/:platform/:region/:game/:gamertag', function(req, res, next)
   Q().then(function(){
     const gamerOptions = {
       gamertag: new RegExp('^' + gerUsernameRegexpForSearch(gamertag) + '$', "i"),
-      platform: logic_lol.regions_verbose[region],
+      region: region,
     };
+
     return Gamer.find(gamerOptions);
   }).then(function(gamers, err) {
     if (err) {
