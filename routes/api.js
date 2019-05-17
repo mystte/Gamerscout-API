@@ -246,6 +246,8 @@ router.get('/search/:platform/:region/:game/:gamertag', function(req, res, next)
     } else if (gamers) {
       let gamerReviews = null;
       return Q().then(() => {
+        return logic_lol.refreshGamerData(region, gamers);
+      }).then(() => {
         let filters = {};
         if (query_filter === 'APPROVALS') filters.review_type = 'REP';
         if (query_filter === 'DISAPPROVALS') filters.review_type = 'FLAME';
@@ -257,8 +259,6 @@ router.get('/search/:platform/:region/:game/:gamertag', function(req, res, next)
       }).then((reviews) => {
         gamerReviews = reviews;
         logic_lol.getTopTags(reviews.docs);
-        return logic_lol.refreshGamerData(region, gamers);
-      }).then(() => {
         return getReviewerNameInReviews(gamers, gamerReviews, loggedInuserId);
       }).then((gamers) => {
         return parsedGamersProfilePictures(gamers);

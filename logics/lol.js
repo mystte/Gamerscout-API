@@ -425,11 +425,16 @@ var lolRequestGetStatsForGamer = async function(region, gamerId, accountId) {
   }
 }
 
+var updateReviewsWithNewGamerId = async function(previousGamerId, newGamerId) {
+  Review.update({gamer_id: previousGamerId}, { $set: {gamer_id: newGamerId} }, { multi: true });
+}
+
 var checkEncryptedGamerId = async function(region, gamer) {
   var url = "https://" + regions[region] + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/by-name/" + gamer.gamertag + "?api_key=" + constants.LOL_API_KEY;
   const result = JSON.parse(await request(url));
 
   if (result.id !== gamer.gamer_id) {
+    await updateReviewsWithNewGamerId(gamer.gamer_id, result.id);
     gamer.gamer_id = result.id;
     gamer.account_id = result.accountId;
   }
