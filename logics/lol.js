@@ -43,13 +43,14 @@ const regions_short = () => {
   return result;
 }
 
-function orderByOccurrence(arr) {
+function orderByOccurrence(arr, total) {
   var counts = {};
+
   arr.forEach(function(value){
-      if(!counts[value]) {
-          counts[value] = 0;
-      }
-      counts[value]++;
+    if(!counts[value]) {
+      counts[value] = 0;
+    }
+    counts[value]++;
   });
 
   const sortedTags = Object.keys(counts).sort(function(curKey,nextKey) {
@@ -60,47 +61,29 @@ function orderByOccurrence(arr) {
     finalTags.push({
       name: sortedTags[i],
       frequency: counts[sortedTags[i]],
+      ratio: counts[sortedTags[i]] * 100 / total,
     });
   }
   return finalTags;
 }
 
 // get third top tags for a user
-var getTopTags = function(reviews) {
-    var i = 0;
-    var j = 0;
-    var previous = null;
-    var top_tags = [];
-    var frequency = [];
-    while (i < reviews.length) {
-        while (j < reviews[i].tags.length) {
-            frequency.push(reviews[i].tags[j].name); 
-            j++;
-        }
-        j = 0;
-        i++;
-    }
-    frequency = orderByOccurrence(frequency);
-    i = 0;
-    while (i < frequency.length) {
-        top_tags.push(frequency[i]);
-        if (i == 2) {
-            return top_tags;
-        }
-        i++;
-    }
-    return top_tags;
-}
-
-// get overall rating
-var getOverallRating = function(reviews) {
-  var total = 0;
+var computeAttributes = function(reviews) {
   var i = 0;
+  var j = 0;
+  var attributes = [];
+  var frequency = [];
+  var total = 0;
   while (i < reviews.length) {
-      total += parseFloat(reviews[i].rating);
-      i++;
+    total += reviews[i].tags.length;
+    while (j < reviews[i].tags.length) {
+      frequency.push(reviews[i].tags[j].name);
+      j++;
+    }
+    j = 0;
+    i++;
   }
-  return total / i + 1;
+  return orderByOccurrence(frequency, total);
 }
 
 // Generate the request for the lol api
@@ -150,7 +133,7 @@ var getLolProfileIcon = function(iconId) {
   return (iconId) ? "https://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + iconId + ".png" : "/static/images/default_profile_picture.jpg";
 }
 
-// Create entries with json form 
+// Create entries with json form
 var createLolGamersInDB = function(json) {
   var result = [];
   for(var i=0; i < json.length; i++) (function(i){
@@ -165,7 +148,7 @@ var createLolGamersInDB = function(json) {
       game : json[i].game,
       game_code: json[i].game_code,
       stats: json[i].stats,
-      top_tags: [],
+      attributes: [],
       reviews: [],
       last_update: Date.now(),
       profile_picture: getLolProfileIcon(json[i].profileIconId)
@@ -216,7 +199,7 @@ var postReview = function(gamer, comment, tags, review_type, reviewer_id) {
         gamer.review_count += 1;
         result.status = 201;
         result.data = {message : "Review Successfully posted"};
-        gamer.top_tags = getTopTags(reviews);
+        gamer.attributes = computeAttributes(reviews);
         const newReview = new Review(review);
         newReview.save();
 
@@ -237,7 +220,7 @@ var postReview = function(gamer, comment, tags, review_type, reviewer_id) {
 var getGamerProfile = function(gamer) {
     var result = {status : 400, data : {message : "getGamerProfile"}};
     return Q().then(function(){
-      return Tag.find({}); 
+      return Tag.find({});
     }).then(function(tags, err) {
       if (err) {
         result.data = {message : err};
@@ -537,8 +520,6 @@ var getLol = function(gamertag) {
   });
 }
 
-
-
 module.exports = {
   getLol: getLol,
   getLeague,
@@ -552,5 +533,5 @@ module.exports = {
   getGamerStats: lolRequestGetStatsForGamer,
   refreshGamerData,
   createLolGamersInDB: createLolGamersInDB,
-  getTopTags,
+  computeAttributes,
 }

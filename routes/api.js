@@ -108,6 +108,7 @@ const getReviewerNameInReviews = function(gamers, reviews, loggedInuserId) {
       }).then(async (updatedReviews) => {
         newGamer.hasReviewed = await hasUserAlreadyReviewed(loggedInuserId, newGamer.gamer_id);
         newGamer.reviews = updatedReviews;
+        newGamer.attributes = logic_lol.computeAttributes(reviews.docs);
         newGamer.reviews_data = {
           pages: reviews.pages,
           page: reviews.page,
@@ -258,7 +259,6 @@ router.get('/search/:platform/:region/:game/:gamertag', function(req, res, next)
         });
       }).then((reviews) => {
         gamerReviews = reviews;
-        logic_lol.getTopTags(reviews.docs);
         return getReviewerNameInReviews(gamers, gamerReviews, loggedInuserId);
       }).then((gamers) => {
         return parsedGamersProfilePictures(gamers);
