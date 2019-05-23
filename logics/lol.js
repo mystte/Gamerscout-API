@@ -71,7 +71,6 @@ function orderByOccurrence(arr, total) {
 var computeAttributes = function(reviews) {
   var i = 0;
   var j = 0;
-  var attributes = [];
   var frequency = [];
   var total = 0;
   while (i < reviews.length) {

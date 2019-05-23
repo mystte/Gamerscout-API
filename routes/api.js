@@ -104,7 +104,7 @@ const getReviewerNameInReviews = function(gamers, reviews, loggedInuserId) {
     let newGamer = JSON.parse(JSON.stringify(gamers[i]));
     newGamers.push(
       Q().then(() => {
-          return getUsersFromReviews(reviews.docs);
+        return getUsersFromReviews(reviews.docs);
       }).then(async (updatedReviews) => {
         newGamer.hasReviewed = await hasUserAlreadyReviewed(loggedInuserId, newGamer.gamer_id);
         newGamer.reviews = updatedReviews;
