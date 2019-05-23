@@ -52,7 +52,7 @@ router.post('/tags', function(req, res, next) {
 });
 
 // Retrieve available tags
-router.get('/tags', function(req, res, next) {
+router.get('/attributes', function(req, res, next) {
     // if (!req.session._id) {
     //     res.status(403).json({err : "Forbidden"});
     //     return;
@@ -61,10 +61,10 @@ router.get('/tags', function(req, res, next) {
         return Tag.find();
     }).then(function(tags, err) {
         if (err) {
-            console.log(err);
-            return res.status(500).json("Internal Server Error");
+          console.log(err);
+          return res.status(500).json("Internal Server Error");
         } else {
-            return res.status(200).json({tags : tags});
+          return res.status(200).json({ attributes : tags});
         }
     }).catch(function(reason) {
         console.log(reason);
@@ -358,7 +358,7 @@ router.post('/gamer/review', function(req, res, next) {
     }
     var gamer_id = req.body.id ? req.body.id : null;
     var comment = req.body.comment ? req.body.comment : null;
-    var tags = req.body.tags ? req.body.tags : [];
+    var attributes = req.body.attributes ? req.body.attributes : [];
     var review_type = req.body.review_type ? req.body.review_type : null;
 
     Q().then(function() {
@@ -370,7 +370,7 @@ router.post('/gamer/review', function(req, res, next) {
             res.status(404).json({error : "Gamer Not Found"});
         } else {
             return Q().then(function() {
-                return logic_lol.postReview(gamer, comment, tags, review_type, req.session._id);
+                return logic_lol.postReview(gamer, comment, attributes, review_type, req.session._id);
             }).then(function(result) {
                 if (environment === 'production') slack.slackNotificationForReview('`' + req.session._id + '` just reviewed `' + gamer.gamertag + '` and said: `' + comment + '`');
                 res.status(result.status).json(result.data);
