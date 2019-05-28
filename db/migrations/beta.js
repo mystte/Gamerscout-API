@@ -44,3 +44,17 @@ db.reviews.update({ "tags.name": "Cheater" }, { $set: { "tags.$.name": "cheater"
 db.reviews.update({ "tags.name": "Griefer" }, { $set: { "tags.$.name": "griefer" } }, { multi: true });
 db.reviews.update({ "tags.name": "Troll" }, { $set: { "tags.$.name": "troll" } }, { multi: true });
 db.reviews.update({ "tags.name": "Scammer" }, { $set: { "tags.$.name": "scammer" } }, { multi: true });
+
+
+db.reviews.update({ "tags.name": "shotCaller" }, { $set: { "tags.$.type": "good" } }, { multi: true });
+db.reviews.update({ "tags.name": "chill" }, { $set: { "tags.$.type": "good" } }, { multi: true });
+db.reviews.update({ "tags.name": "skilled" }, { $set: { "tags.$.type": "good" } }, { multi: true });
+db.reviews.update({ "tags.name": "teamPlayer" }, { $set: { "tags.$.type": "good" } }, { multi: true });
+db.reviews.update({ "tags.name": "abusive" }, { $set: { "tags.$.type": "neutral" } }, { multi: true });
+db.reviews.update({ "tags.name": "quitter" }, { $set: { "tags.$.type": "neutral" } }, { multi: true });
+db.reviews.update({ "tags.name": "unhelpful" }, { $set: { "tags.$.type": "neutral" } }, { multi: true });
+db.reviews.update({ "tags.name": "unskilled" }, { $set: { "tags.$.type": "neutral" } }, { multi: true });
+db.reviews.update({ "tags.name": "cheater" }, { $set: { "tags.$.type": "bad" } }, { multi: true });
+db.reviews.update({ "tags.name": "griefer" }, { $set: { "tags.$.type": "bad" } }, { multi: true });
+db.reviews.update({ "tags.name": "troll" }, { $set: { "tags.$.type": "bad" } }, { multi: true });
+db.reviews.update({ "tags.name": "scammer" }, { $set: { "tags.$.type": "bad" } }, { multi: true });
