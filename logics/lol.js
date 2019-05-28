@@ -181,7 +181,7 @@ var postReview = function(gamer, comment, tags, review_type, reviewer_id) {
       gamer_id : gamer.gamer_id
     };
     return Q().then(() => {
-      return Review.find({gamer_id: gamer.gamer_id});
+      return Review.find({ gamer_id: gamer.gamer_id }, { 'tags._id': 0 });
     }).then(function(foundReviews) {
       reviews = foundReviews;
       reviews.push(review);
