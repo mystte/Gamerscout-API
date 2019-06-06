@@ -152,7 +152,7 @@ router.get('/config', function(req, res, next) {
   res.status(200).json({
     platforms: config.supported_platforms,
     regions: {
-      lol: {
+      riot: {
         regions_short: lol_regions_short,
         regions: logic_lol.regions,
         verbose: logic_lol.regions_verbose
