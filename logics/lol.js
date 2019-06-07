@@ -98,7 +98,7 @@ var lolRequestGetSummonerByGamertag = function(region, username, json) {
     data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
-    data.game_code = "LOL";
+    data.game_code = "lol";
     json.push(data);
     return json;
   }).catch(function (err) {
@@ -119,7 +119,7 @@ var lolRequestGetSummonerByGamerId = function (region, gamerId, json) {
     data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
-    data.game_code = "LOL";
+    data.game_code = "lol";
     json.push(data);
     return json;
   }).catch(function (err) {
@@ -296,7 +296,6 @@ var sortStatsResultArray = function(rankedArray) {
 }
 
 var getRankedFromData = function(data) {
-
   const result = [];
   for (let i = 0; i < data.length; i++) {
     result.push({
