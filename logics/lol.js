@@ -46,10 +46,11 @@ const regions_short = () => {
   return result;
 }
 
-function orderByOccurrence(arr) {
+function orderByOccurrence(arr, total) {
   var counts = {};
-  arr.forEach(function (value) {
-    if (!counts[value]) {
+
+  arr.forEach(function(value){
+    if(!counts[value]) {
       counts[value] = 0;
     }
     counts[value]++;
@@ -63,19 +64,20 @@ function orderByOccurrence(arr) {
     finalTags.push({
       name: sortedTags[i],
       frequency: counts[sortedTags[i]],
+      ratio: counts[sortedTags[i]] * 100 / total,
     });
   }
   return finalTags;
 }
 
 // get third top tags for a user
-var getTopTags = function (reviews) {
+var computeAttributes = function(reviews) {
   var i = 0;
   var j = 0;
-  var previous = null;
-  var top_tags = [];
   var frequency = [];
+  var total = 0;
   while (i < reviews.length) {
+    total += reviews[i].tags.length;
     while (j < reviews[i].tags.length) {
       frequency.push(reviews[i].tags[j].name);
       j++;
@@ -83,27 +85,7 @@ var getTopTags = function (reviews) {
     j = 0;
     i++;
   }
-  frequency = orderByOccurrence(frequency);
-  i = 0;
-  while (i < frequency.length) {
-    top_tags.push(frequency[i]);
-    if (i == 2) {
-      return top_tags;
-    }
-    i++;
-  }
-  return top_tags;
-}
-
-// get overall rating
-var getOverallRating = function (reviews) {
-  var total = 0;
-  var i = 0;
-  while (i < reviews.length) {
-    total += parseFloat(reviews[i].rating);
-    i++;
-  }
-  return total / i + 1;
+  return orderByOccurrence(frequency, total);
 }
 
 // Generate the request for the lol api
@@ -119,7 +101,7 @@ var lolRequestGetSummonerByGamertag = function (region, username, json) {
     data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
-    data.game_code = "LOL";
+    data.game_code = "lol";
     json.push(data);
     return json;
   }).catch(function (err) {
@@ -140,7 +122,7 @@ var lolRequestGetSummonerByGamerId = function (region, gamerId, json) {
     data.regionVerbose = regions_verbose[lolRegion.toLowerCase()];
     data.region = region.toLowerCase();
     data.game = "League Of legends";
-    data.game_code = "LOL";
+    data.game_code = "lol";
     json.push(data);
     return json;
   }).catch(function (err) {
@@ -153,8 +135,8 @@ var getLolProfileIcon = function (iconId) {
   return (iconId) ? "https://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + iconId + ".png" : "/static/images/default_profile_picture.jpg";
 }
 
-// Create entries with json form 
-var createLolGamersInDB = function (json) {
+// Create entries with json form
+var createLolGamersInDB = function(json) {
   var result = [];
   for (var i = 0; i < json.length; i++) (function (i) {
     var newGamer = new Gamer({
@@ -168,7 +150,7 @@ var createLolGamersInDB = function (json) {
       game: json[i].game,
       game_code: json[i].game_code,
       stats: json[i].stats,
-      top_tags: [],
+      attributes: [],
       reviews: [],
       last_update: Date.now(),
       profile_picture: getLolProfileIcon(json[i].profileIconId)
@@ -202,8 +184,8 @@ var postReview = function (gamer, comment, tags, review_type, reviewer_id) {
       gamer_id: gamer.gamer_id
     };
     return Q().then(() => {
-      return Review.find({ gamer_id: gamer.gamer_id });
-    }).then(function (foundReviews) {
+      return Review.find({ gamer_id: gamer.gamer_id }, { 'tags._id': 0 });
+    }).then(function(foundReviews) {
       reviews = foundReviews;
       reviews.push(review);
       return Gamer.findOne({ _id: gamer._id });
@@ -218,8 +200,8 @@ var postReview = function (gamer, comment, tags, review_type, reviewer_id) {
         }
         gamer.review_count += 1;
         result.status = 201;
-        result.data = { message: "Review Successfully posted" };
-        gamer.top_tags = getTopTags(reviews);
+        result.data = {message : "Review Successfully posted"};
+        gamer.attributes = computeAttributes(reviews);
         const newReview = new Review(review);
         newReview.save();
 
@@ -237,22 +219,22 @@ var postReview = function (gamer, comment, tags, review_type, reviewer_id) {
 }
 
 // Retrieve one gamer profile in the db + the tags list
-var getGamerProfile = function (gamer) {
-  var result = { status: 400, data: { message: "getGamerProfile" } };
-  return Q().then(function () {
-    return Tag.find({});
-  }).then(function (tags, err) {
-    if (err) {
-      result.data = { message: err };
-      return result;
-    } else {
-      var data = JSON.parse(JSON.stringify(gamer));
-      data.all_tags = tags;
-      result.status = 201;
-      result.data = data;
-      return result;
-    }
-  });
+var getGamerProfile = function(gamer) {
+    var result = {status : 400, data : {message : "getGamerProfile"}};
+    return Q().then(function(){
+      return Tag.find({});
+    }).then(function(tags, err) {
+      if (err) {
+        result.data = {message : err};
+        return result;
+      } else {
+        var data = JSON.parse(JSON.stringify(gamer));
+        data.all_tags = tags;
+        result.status = 201;
+        result.data = data;
+        return result;
+      }
+    });
 }
 
 // Request for a specific lol gamertag
@@ -316,8 +298,7 @@ var sortStatsResultArray = function (rankedArray) {
   return sortedRankedArray;
 }
 
-var getRankedFromData = function (data) {
-
+var getRankedFromData = function(data) {
   const result = [];
   for (let i = 0; i < data.length; i++) {
     result.push({
@@ -428,11 +409,16 @@ var lolRequestGetStatsForGamer = async function (region, gamerId, accountId) {
   }
 }
 
-var checkEncryptedGamerId = async function (region, gamer) {
+var updateReviewsWithNewGamerId = async function(previousGamerId, newGamerId) {
+  Review.update({gamer_id: previousGamerId}, { $set: {gamer_id: newGamerId} }, { multi: true });
+}
+
+var checkEncryptedGamerId = async function(region, gamer) {
   var url = "https://" + regions[region] + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/by-name/" + gamer.gamertag + "?api_key=" + constants.LOL_API_KEY;
   const result = JSON.parse(await request(url));
 
   if (result.id !== gamer.gamer_id) {
+    await updateReviewsWithNewGamerId(gamer.gamer_id, result.id);
     gamer.gamer_id = result.id;
     gamer.account_id = result.accountId;
   }
@@ -657,8 +643,6 @@ var getLol = function (gamertag) {
   });
 }
 
-
-
 module.exports = {
   getLol: getLol,
   getLeague,
@@ -673,5 +657,6 @@ module.exports = {
   refreshGamerData,
   createLolGamersInDB: createLolGamersInDB,
   getTopTags,
-  getMatchAggregateStatsByChampion
+  getMatchAggregateStatsByChampion,
+  computeAttributes
 }

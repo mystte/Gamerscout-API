@@ -54,24 +54,24 @@ router.post('/tags', function (req, res, next) {
 });
 
 // Retrieve available tags
-router.get('/tags', function (req, res, next) {
-  // if (!req.session._id) {
-  //     res.status(403).json({err : "Forbidden"});
-  //     return;
-  // }
-  Q().then(function () {
-    return Tag.find();
-  }).then(function (tags, err) {
-    if (err) {
-      console.log(err);
-      return res.status(500).json("Internal Server Error");
-    } else {
-      return res.status(200).json({ tags: tags });
-    }
-  }).catch(function (reason) {
-    console.log(reason);
-    return res.status(500).json("Internal Server Error");
-  });
+router.get('/attributes', function(req, res, next) {
+    // if (!req.session._id) {
+    //     res.status(403).json({err : "Forbidden"});
+    //     return;
+    // }
+    Q().then(function() {
+        return Tag.find();
+    }).then(function(tags, err) {
+        if (err) {
+          console.log(err);
+          return res.status(500).json("Internal Server Error");
+        } else {
+          return res.status(200).json({ attributes : tags});
+        }
+    }).catch(function(reason) {
+        console.log(reason);
+        return res.status(500).json("Internal Server Error");
+    });
 });
 
 const hasUserAlreadyReviewed = (loggedInuserId = null, gamerId) => {
@@ -110,6 +110,7 @@ const getReviewerNameInReviews = function (gamers, reviews, loggedInuserId) {
       }).then(async (updatedReviews) => {
         newGamer.hasReviewed = await hasUserAlreadyReviewed(loggedInuserId, newGamer.gamer_id);
         newGamer.reviews = updatedReviews;
+        newGamer.attributes = logic_lol.computeAttributes(reviews.docs);
         newGamer.reviews_data = {
           pages: reviews.pages,
           page: reviews.page,
@@ -153,7 +154,7 @@ router.get('/config', function (req, res, next) {
   res.status(200).json({
     platforms: config.supported_platforms,
     regions: {
-      lol: {
+      riot: {
         regions_short: lol_regions_short,
         regions: logic_lol.regions,
         verbose: logic_lol.regions_verbose
@@ -343,37 +344,37 @@ router.post('/account/validate', function (req, res, next) {
 });
 
 // Post a review for a specific gamer
-router.post('/gamer/review', function (req, res, next) {
-  if (!req.session._id) {
-    res.status(403).json({ err: "Forbidden" });
-    return;
-  }
-  var gamer_id = req.body.id ? req.body.id : null;
-  var comment = req.body.comment ? req.body.comment : null;
-  var tags = req.body.tags ? req.body.tags : [];
-  var review_type = req.body.review_type ? req.body.review_type : null;
+router.post('/gamer/review', function(req, res, next) {
+    if (!req.session._id) {
+        res.status(403).json({err : "Forbidden"});
+        return;
+    }
+    var gamer_id = req.body.id ? req.body.id : null;
+    var comment = req.body.comment ? req.body.comment : null;
+    var attributes = req.body.attributes ? req.body.attributes : [];
+    var review_type = req.body.review_type ? req.body.review_type : null;
 
-  Q().then(function () {
-    return Gamer.findOne({ _id: gamer_id });
-  }).then(function (gamer, err) {
-    if (err) {
-      res.status(400).json({ error: err });
-    } else if (!gamer) {
-      res.status(404).json({ error: "Gamer Not Found" });
-    } else {
-      return Q().then(function () {
-        return logic_lol.postReview(gamer, comment, tags, review_type, req.session._id);
-      }).then(function (result) {
-        if (environment === 'production') slack.slackNotificationForReview('`' + req.session._id + '` just reviewed `' + gamer.gamertag + '` and said: `' + comment + '`');
-        res.status(result.status).json(result.data);
-      }).catch((reason) => {
-        console.log("reason", reason);
+    Q().then(function() {
+        return Gamer.findOne({_id:gamer_id});
+    }).then(function(gamer, err) {
+        if (err) {
+            res.status(400).json({error : err});
+        } else if (!gamer) {
+            res.status(404).json({error : "Gamer Not Found"});
+        } else {
+            return Q().then(function() {
+                return logic_lol.postReview(gamer, comment, attributes, review_type, req.session._id);
+            }).then(function(result) {
+                if (environment === 'production') slack.slackNotificationForReview('`' + req.session._id + '` just reviewed `' + gamer.gamertag + '` and said: `' + comment + '`');
+                res.status(result.status).json(result.data);
+            }).catch((reason) => {
+                console.log("reason", reason);
+                res.status(500).json('Internal Server Error');
+            });
+        }
+    }).catch((reason) => {
         res.status(500).json('Internal Server Error');
       });
-    }
-  }).catch((reason) => {
-    res.status(500).json('Internal Server Error');
-  });
 });
 
 // Get random players
