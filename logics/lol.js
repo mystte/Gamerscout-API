@@ -656,7 +656,6 @@ module.exports = {
   getGamerStats: lolRequestGetStatsForGamer,
   refreshGamerData,
   createLolGamersInDB: createLolGamersInDB,
-  getTopTags,
   getMatchAggregateStatsByChampion,
   computeAttributes
 }

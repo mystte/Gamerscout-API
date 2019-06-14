@@ -245,7 +245,7 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
         limit: query_limit,
         sort: { date: query_sort }
       })
-      logic_lol.getTopTags(reviews.docs);
+      logic_lol.computeAttributes(reviews.docs);
       await logic_lol.refreshGamerData(region, gamers);
       const updatedGamers = await getReviewerNameInReviews(gamers, reviews, loggedInuserId);
       gamerOutline = await parsedGamersProfilePictures(updatedGamers)
