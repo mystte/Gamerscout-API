@@ -199,29 +199,33 @@ router.get('/email_validation/:email', function (req, res, next) {
   }
 });
 
+const constructGamerJSON = gamer => {
+  const gamerJSON = gamer
+  
+}
+
 // Search a specific usertag based on the platform
 // For now we force league of legends but we'll have to refactor this once
 // we want to implement more of them (it is also ugly af :/)
 router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) => {
   const loggedInuserId = (req.session._id) ? req.session._id : null;
-  var platform = req.params.platform ? req.params.platform.toLowerCase() : null;
-  var game = req.params.game ? req.params.game.toLowerCase() : null;
-  var gamertag = req.params.gamertag ? req.params.gamertag.toLowerCase() : null;
-  var region = req.params.region ? req.params.region.toLowerCase() : null;
-  var query_limit = req.query.limit ? +req.query.limit : 5;
-  var query_sort = (req.query.sort && req.query.sort === "OLDEST") ? 1 : -1;
-  var query_filter = (req.query.filter && (req.query.filter === "APPROVALS" || req.query.filter === "DISAPPROVALS") ? req.query.filter : "ALL");
-  var query_page = req.query.page ? +req.query.page : 1;
+  const platform = req.params.platform ? req.params.platform.toLowerCase() : null;
+  const game = req.params.game ? req.params.game.toLowerCase() : null;
+  const gamertag = req.params.gamertag ? req.params.gamertag.toLowerCase() : null;
+  const region = req.params.region ? req.params.region.toLowerCase() : null;
+  const query_limit = req.query.limit ? +req.query.limit : 5;
+  const query_sort = (req.query.sort && req.query.sort === "OLDEST") ? 1 : -1;
+  const query_filter = (req.query.filter && (req.query.filter === "APPROVALS" || req.query.filter === "DISAPPROVALS") ? req.query.filter : "ALL");
+  const query_page = req.query.page ? +req.query.page : 1;
 
   try {
     const gamerOptions = {
       gamertag: new RegExp('^' + gerUsernameRegexpForSearch(gamertag) + '$', "i"),
       region: region,
     };
-    log.info(gamerOptions)
-    //const gamers = await Gamer.find(gamerOptions)
-    let gamers = []
-    let gamerJSON
+    let gamers = await Gamer.find(gamerOptions);
+    let gamerJSON;
+    let gamerOutline;
 
     if (!gamers || gamers.length === 0) {
       log.info(`${platform}-${game}-${gamertag} : Gamer did not exist in Mongo, querying in API...`)
@@ -230,74 +234,31 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
       } else {
         gamerJSON = await logic_lol.getLol(gamertag);
       }
-      //gamers = await logic_lol.createLolGamersInDB(gamerJSON);
+      gamerOutline = await parsedGamersProfilePictures(await logic_lol.createLolGamersInDB(gamerJSON))
+    } else {
+      let filters = {};
+      if (query_filter === 'APPROVALS') filters.review_type = 'REP';
+      if (query_filter === 'DISAPPROVALS') filters.review_type = 'FLAME';
+      const reviews = await Review.paginate({ gamer_id: gamers[0].gamer_id, ...filters }, {
+        page: query_page,
+        limit: query_limit,
+        sort: { date: query_sort }
+      })
+      logic_lol.getTopTags(reviews.docs);
+      await logic_lol.refreshGamerData(region, gamers);
+      const updatedGamers = await getReviewerNameInReviews(gamers, reviews, loggedInuserId);
+      gamerOutline = await parsedGamersProfilePictures(updatedGamers)
     }
-    res.status(200).json({ gamerJSON })
+    //const finalGamer = await constructGamerJSON(gamerOutline)
+    const championData = await logic_lol.getMatchAggregateStatsByChampion('NA1', gamerOutline[0].account_id)
+    
+    gamerOutline[0].stats.frequent_champions = championData
+    res.status(201).json(gamerOutline)
   } catch (err) {
     log.error(`Error: ${err}`)
     res.status(500).json({ error: 'Internal server error' })
   }
 
-  /*
-
-
-
-  Q().then(function(){
-    const gamerOptions = {
-      gamertag: new RegExp('^' + gerUsernameRegexpForSearch(gamertag) + '$', "i"),
-      region: region,
-    };
-    return Gamer.find(gamerOptions);
-  }).then(function(gamers, err) {
-    if (err) {
-      res.status(400).json({error: err});
-    }
-    // If no gamers found in the db we try to find it in the api
-    if (gamers.length == 0) {
-      console.log("No gamers found in db reaching the api...");
-      return Q().then(function(){
-        if (region) {
-          return logic_lol.getLolAccountInRegionByGamerTag(region, gamertag);
-        } else {
-          return logic_lol.getLol(gamertag);
-        }
-      }).then(function (json) {
-        return logic_lol.createLolGamersInDB(json);
-      }).then((gamers) => {
-        return parsedGamersProfilePictures(gamers);
-      }).then(function (gamers) {
-        return {
-          status: 201,
-          data: gamers,
-        };
-      }).then(function(result) {
-        res.status(result.status).json(result.data);
-      }).done();
-    } else if (gamers) {
-      let gamerReviews = null;
-      return Q().then(() => {
-        let filters = {};
-        if (query_filter === 'APPROVALS') filters.review_type = 'REP';
-        if (query_filter === 'DISAPPROVALS') filters.review_type = 'FLAME';
-        return Review.paginate({ gamer_id: gamers[0].gamer_id, ...filters }, {
-          page: query_page,
-          limit: query_limit,
-          sort: { date: query_sort }
-        });
-      }).then((reviews) => {
-        gamerReviews = reviews;
-        logic_lol.getTopTags(reviews.docs);
-        return logic_lol.refreshGamerData(region, gamers);
-      }).then(() => {
-        return getReviewerNameInReviews(gamers, gamerReviews, loggedInuserId);
-      }).then((gamers) => {
-        return parsedGamersProfilePictures(gamers);
-      }).then((gamers) => {
-        res.status(201).json(gamers);
-      });
-    }
-  });
-  */
 });
 
 router.get('/:platform/:region/leagues/:league_id', cache_success, async function (req, res, next) {
