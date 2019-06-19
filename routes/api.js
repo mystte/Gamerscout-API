@@ -250,10 +250,14 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
       const updatedGamers = await getReviewerNameInReviews(gamers, reviews, loggedInuserId);
       gamerOutline = await parsedGamersProfilePictures(updatedGamers)
     }
-    //const finalGamer = await constructGamerJSON(gamerOutline)
-    const championData = await logic_lol.getMatchAggregateStatsByChampion('NA1', gamerOutline[0].account_id)
+    const regionId = logic_lol.regions[region]
+    const championData = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id)
+    const recentMatches = await logic_lol.getRecentMatchList(regionId, gamerOutline[0].account_id)
+    const ranked = await logic_lol.getRankedData(regionId, gamerOutline[0].gamer_id)
     
     gamerOutline[0].stats.frequent_champions = championData
+    gamerOutline[0].stats.recent = recentMatches
+    gamerOutline[0].stats.ranked = ranked
     res.status(201).json(gamerOutline)
   } catch (err) {
     log.error(`Error: ${err}`)
