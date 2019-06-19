@@ -49,8 +49,8 @@ const regions_short = () => {
 function orderByOccurrence(arr, total) {
   var counts = {};
 
-  arr.forEach(function(value){
-    if(!counts[value]) {
+  arr.forEach(function (value) {
+    if (!counts[value]) {
       counts[value] = 0;
     }
     counts[value]++;
@@ -71,7 +71,7 @@ function orderByOccurrence(arr, total) {
 }
 
 // get third top tags for a user
-var computeAttributes = function(reviews) {
+var computeAttributes = function (reviews) {
   var i = 0;
   var j = 0;
   var frequency = [];
@@ -136,7 +136,7 @@ var getLolProfileIcon = function (iconId) {
 }
 
 // Create entries with json form
-var createLolGamersInDB = function(json) {
+var createLolGamersInDB = function (json) {
   var result = [];
   for (var i = 0; i < json.length; i++) (function (i) {
     var newGamer = new Gamer({
@@ -185,7 +185,7 @@ var postReview = function (gamer, comment, tags, review_type, reviewer_id) {
     };
     return Q().then(() => {
       return Review.find({ gamer_id: gamer.gamer_id }, { 'tags._id': 0 });
-    }).then(function(foundReviews) {
+    }).then(function (foundReviews) {
       reviews = foundReviews;
       reviews.push(review);
       return Gamer.findOne({ _id: gamer._id });
@@ -200,7 +200,7 @@ var postReview = function (gamer, comment, tags, review_type, reviewer_id) {
         }
         gamer.review_count += 1;
         result.status = 201;
-        result.data = {message : "Review Successfully posted"};
+        result.data = { message: "Review Successfully posted" };
         gamer.attributes = computeAttributes(reviews);
         const newReview = new Review(review);
         newReview.save();
@@ -219,22 +219,22 @@ var postReview = function (gamer, comment, tags, review_type, reviewer_id) {
 }
 
 // Retrieve one gamer profile in the db + the tags list
-var getGamerProfile = function(gamer) {
-    var result = {status : 400, data : {message : "getGamerProfile"}};
-    return Q().then(function(){
-      return Tag.find({});
-    }).then(function(tags, err) {
-      if (err) {
-        result.data = {message : err};
-        return result;
-      } else {
-        var data = JSON.parse(JSON.stringify(gamer));
-        data.all_tags = tags;
-        result.status = 201;
-        result.data = data;
-        return result;
-      }
-    });
+var getGamerProfile = function (gamer) {
+  var result = { status: 400, data: { message: "getGamerProfile" } };
+  return Q().then(function () {
+    return Tag.find({});
+  }).then(function (tags, err) {
+    if (err) {
+      result.data = { message: err };
+      return result;
+    } else {
+      var data = JSON.parse(JSON.stringify(gamer));
+      data.all_tags = tags;
+      result.status = 201;
+      result.data = data;
+      return result;
+    }
+  });
 }
 
 // Request for a specific lol gamertag
@@ -298,7 +298,7 @@ var sortStatsResultArray = function (rankedArray) {
   return sortedRankedArray;
 }
 
-var getRankedFromData = function(data) {
+var getRankedFromData = function (data) {
   const result = [];
   for (let i = 0; i < data.length; i++) {
     result.push({
@@ -409,11 +409,11 @@ var lolRequestGetStatsForGamer = async function (region, gamerId, accountId) {
   }
 }
 
-var updateReviewsWithNewGamerId = async function(previousGamerId, newGamerId) {
-  Review.update({gamer_id: previousGamerId}, { $set: {gamer_id: newGamerId} }, { multi: true });
+var updateReviewsWithNewGamerId = async function (previousGamerId, newGamerId) {
+  Review.update({ gamer_id: previousGamerId }, { $set: { gamer_id: newGamerId } }, { multi: true });
 }
 
-var checkEncryptedGamerId = async function(region, gamer) {
+var checkEncryptedGamerId = async function (region, gamer) {
   var url = "https://" + regions[region] + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/by-name/" + gamer.gamertag + "?api_key=" + constants.LOL_API_KEY;
   const result = JSON.parse(await request(url));
 
@@ -532,6 +532,76 @@ const getMatchDataForPlayer = async (matchId, region, accountId) => {
   }
 }
 
+const getRecentMatchData = async (accountId, matchId) => {
+  let matchData = await LOLMatches.findOne({ gameId: matchId })
+  if (!matchData) {
+    log.info(`Match data not available in Mongo, calling it from Riot`)
+    const matchDataURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matches/${matchId}?api_key=${constants.LOL_API_KEY}`
+    const matchResponse = await axios.get(matchDataURL)
+    const newMatch = new LOLMatches(matchResponse.data)
+    await newMatch.save()
+    matchData = matchResponse.data
+  }
+  const championData = await axios.get('http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json')
+  const championJson = championData.data.data
+  const championList = Object.entries(championJson).map(d => d[1])
+  const { participants, participantIdentities, gameCreation } = matchData
+  const { participantId } = participantIdentities.find(({ player }) =>
+    player.accountId === accountId
+  )
+  const playerTeamData = participantIdentities.map(({ participantId, player }) => {
+    const { championId, teamId } = participants.find(p => p.participantId === participantId)
+    const championData = championList.find(c => c.key == championId)
+    return {
+      participantId,
+      summonerId: player.summonerName,
+      champion: (championData || {}).name,
+      championId,
+      teamId
+    }
+  })
+  const playerDataForGame = participants.find(p => p.participantId === participantId)
+  const { teamId, championId, stats, timeline, spell1Id, spell2Id } = playerDataForGame
+  const { kills, deaths, assists, item0, item1, item2, item3, item4, item5, item6, win, champLevel, totalMinionsKilled, totalDamageDealToChampions } = stats
+  const { lane } = timeline
+  const champion = championList.find(c => c.key == championId)
+  const kda = (kills + assists) / deaths
+  const items = [item0, item1, item2, item3, item4, item5, item6]
+  const teammates = playerTeamData.filter(p => p.teamId === teamId)
+  const opponents = playerTeamData.filter(p => p.teamId !== teamId)
+  return {
+    championId,
+    champion: (champion || {}).name,
+    kills,
+    deaths,
+    assists,
+    kda,
+    items,
+    spell1Id,
+    spell2Id,
+    teamId,
+    win,
+    lane,
+    championLevel: champLevel,
+    totalMinionsKilled,
+    totalDamageDealToChampions,
+    teammates,
+    opponents,
+    gameCreation
+  }
+}
+
+const getRecentMatchList = async (region, accountId) => {
+  const matches = await getMatchListForPlayer(region, accountId)
+  const matchIds = matches.map(({ gameId }) => gameId)
+  const matchHistory = await Promise.all(matchIds.map(async matchId => {
+    return await getRecentMatchData(accountId, matchId)
+  }))
+  const sorted = _.sortBy(matchHistory, m => m.gameCreation)
+  if (sorted.length < 20) return sorted.reverse()
+  else return sorted.slice(sorted.length - 5, sorted.length).reverse()
+}
+
 const getMatchListForPlayer = async (region, accountId) => {
   const matchListURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matchlists/by-account/${accountId}?api_key=${constants.LOL_API_KEY}`
   const { data } = await axios.get(matchListURL)
@@ -617,6 +687,13 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
   }
 }
 
+const getRankedData = async (region, gamerId) => {
+  const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`
+  console.log(path)
+  const {data} = await axios.get(path)
+  return data
+}
+
 
 // Request for a specific lol gamertag (DEPRECATED)
 var getLol = function (gamertag) {
@@ -655,7 +732,9 @@ module.exports = {
   regions: regions,
   getGamerStats: lolRequestGetStatsForGamer,
   refreshGamerData,
+  getRankedData,
   createLolGamersInDB: createLolGamersInDB,
   getMatchAggregateStatsByChampion,
-  computeAttributes
+  computeAttributes,
+  getRecentMatchList
 }
