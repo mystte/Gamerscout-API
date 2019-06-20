@@ -23,7 +23,7 @@ var upload = multer({ dest: 'public/images/avatars' });
 // Allowed images types
 var allowed_images = ["image/jpeg", "image/png", "image/jpg"];
 
-// create reusable transporter object using the default SMTP transport 
+// create reusable transporter object using the default SMTP transport
 var transporter = nodemailer.createTransport({
   host: 'mail.privateemail.com',
   port: 465,
@@ -45,17 +45,17 @@ var format_login_export = function(user) {
 }
 
 var sendValidateAccountEmail = function (email, host, token) {
-  // setup e-mail data with unicode symbols 
+  // setup e-mail data with unicode symbols
   var mailOptions = {
-    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address 
-    to: email, // list of receivers 
-    subject: 'Validate your account', // Subject line 
+    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address
+    to: email, // list of receivers
+    subject: 'Validate your account', // Subject line
     text: 'You are receiving this email because you (or someone else) have created an account on Gamerscout.\n\n' +
     'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
     host + '/validate-account/' + token + '\n\n' +
       'If you did not request this, please ignore this email.\n'
   };
-  // send mail with defined transport object 
+  // send mail with defined transport object
   transporter.sendMail(mailOptions, function (error, info) {
     if (error) {
       return console.log(error);
@@ -159,7 +159,7 @@ router.post('/facebook_auth', function(req, res, next) {
   var _id = mongoose.Types.ObjectId();
   var access_token = req.body.access_token ? req.body.access_token : null;
   var user_json = null;
-  
+
   request(config.facebook_url + "/" + config.facebook_url_profile + access_token).then(function (result) { // Get facebook profile
     var result_json = JSON.parse(result);
     request(config.facebook_url + "/" + result_json.id + config.facebook_url_picture + access_token).then(function(picture_result) { // Get facebook profile picture
@@ -269,7 +269,7 @@ router.post('/signup', function(req, res, next) {
   var newsletter = req.body.newsletter ? req.body.newsletter : false;
 
   if (!username || !password || !email) {
-    res.status(400).json({error : 'Mandatory field missing.'});
+    res.status(400).json({ error: 'errMissingParam'});
   } else {
     // Create the new user
     var newUser = new User({
@@ -296,16 +296,16 @@ router.post('/signup', function(req, res, next) {
     }).then(function(user, err) {
       if (err) {
         console.log(__filename, err);
-        return res.status(500).json({error : "Internal Server Error"});
+        return res.status(500).json({error : "errInternal"});
       } else if (user) {
-        return res.status(400).json({error : "User already exists"});
+        return res.status(400).json({error : "errUserExists"});
       } else {
         newUser.save().then(function(createdUser) {
           if (environment === 'production') slack.slackNotificationSubscriptions('Congratulation boyz!!! You have a new gamer in your community : `' + username + '`');
           sendValidateAccountEmail(createdUser.email, req.protocol + "://" + constants.CLIENT_BASE_URL, createdUser.validateAccountToken);
-          return res.status(201).json({message : "User created"});
+          return res.status(201).json({message : "success"});
         }).catch(function(error) {
-          if (error.code === 11000) return res.status(400).json({ error: 'Display name already exists' });
+          if (error.code === 11000) return res.status(400).json({ error: 'errUserExists' });
           return res.status(400).json({ error : error.message });
         });
       }
@@ -325,7 +325,7 @@ router.delete('/delete/:user_id', function(req, res, next) {
       res.status(400).json({error : err});
       return;
     } else if (!user) {
-      res.status(404).json({error : "User not found"});
+      res.status(404).json({ error: "errUserNotFound"});
       return;
     } else {
       // Remove the user from the database
@@ -348,9 +348,9 @@ router.post('/login', function(req, res, next) {
     }).then(function(user, err) {
       if (err) {
         console.log(__filename, err);
-        res.status(500).json({error : "Internal Server Error"}); return Q.reject();
+        res.status(500).json({ error: "errInternal"}); return Q.reject();
       } else if (!user) {
-        res.status(404).json({error : "User Not Found"}); return Q.reject();
+        res.status(400).json({ error: "errUserNotFound"}); return Q.reject();
       } else {
         user_json = JSON.parse(JSON.stringify(user));
         return user.comparePassword(password, user.password);
@@ -363,14 +363,14 @@ router.post('/login', function(req, res, next) {
         req.session.fb_id = null;
         res.status(201).json(user_json);
         } else {
-          res.status(400).json({error : "Wrong password"});
+          res.status(400).json({error : "errWrongPassword"});
         }
     }).catch(function(reason) {
         console.log(__filename, reason.message);
-        res.status(500).json({error : "Internal Server Error"});
+        res.status(500).json({error : "errInternal"});
     });
   } else {
-    res.status(400).json({error : 'login or password missing'});
+    res.status(400).json({error : 'errMissingParam'});
   }
 });
 
@@ -382,11 +382,11 @@ router.post('/logout', function(req, res, next) {
       if(err){
         res.status(400).json({error : err});
       } else {
-        res.status(205).json({message : "User logged out"});
+        res.status(205).json({message : "success"});
       }
     });
   } else {
-    res.status(400).json({error : "No logged in user"});
+    res.status(400).json({error : "errNoLoggedInUser"});
   }
 });
 
@@ -410,13 +410,13 @@ router.post('/forgotten_password', function(req, res, next) {
           found_user.save();
           logic_forgot_password.send_forgot_password_email(email, req.protocol + "://" + req.header('host'), token);
         });
-        res.status(200).json({ message: "Email sent to user if it exists" });
+        res.status(200).json({ message: "success" });
       } else { // User not found
-        res.status(200).json({ message: "Email sent to user if it exists" });
+        res.status(200).json({ message: "success" });
       }
     })
   } else {
-    res.status(400).json({error : "Mail cannot be null"});
+    res.status(400).json({error : "errMissingParam"});
   }
 });
 
@@ -429,7 +429,7 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
     if (file) {
       if (allowed_images.indexOf(file.mimetype) == -1) {
         fs.unlink(file.path);
-        res.status(400).json({error : "Bad image format"});
+        res.status(400).json({error : "errBadFormat"});
       } else {
         return Q().then(function() {
           return User.findOne({_id : user_id});
@@ -437,7 +437,7 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
           if (err) {
             res.status(400).json({error : err});
           } else if (!user) {
-            res.status(400).json({error : "User not found"});
+            res.status(400).json({error : "errUserNotFound"});
           } else if (req.session.email !== user.email){
             res.status(403).json({error : "Trying to modify another user's profile"});
           } else {
@@ -501,7 +501,7 @@ router.put('/:user_id', async function(req, res, next) {
         return;
       // User not found
       } else if (!user) {
-        res.status(404).json({error : "User not found"});
+        res.status(400).json({ error: "errUserNotFound"});
       // Check if the user_id is the same as the current session
       } else if (user.email == req.session.email) {
         var username = req.body.username ? req.body.username : user.username;
@@ -542,7 +542,7 @@ router.put('/:user_id', async function(req, res, next) {
               });;
             } else {
               res.status(400).json({ error: "Display name " + req.body.username + " is already taken" });
-            } 
+            }
           });
         } else {
           return user.save().then((result) => {
@@ -551,7 +551,7 @@ router.put('/:user_id', async function(req, res, next) {
             console.log(err);
           });
         }
-        
+
       }
     }).catch(function(reason) {
       console.log(__filename, reason.message);
