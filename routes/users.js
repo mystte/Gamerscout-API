@@ -583,7 +583,7 @@ router.get('/_/authenticated', function(req, res, next) {
       console.log(reason);
     });
   } else {
-    res.status(400).json({error : "errNoSignedInUser"});
+    res.status(200).json({});
   }
 });
 
