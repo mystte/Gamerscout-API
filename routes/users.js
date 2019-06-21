@@ -566,25 +566,24 @@ router.put('/:user_id', async function(req, res, next) {
 
 // Retrieve authenticated user profile
 router.get('/_/authenticated', function(req, res, next) {
-  console.log("session = ", req.session);
   if (req.session._id) {
     return Q().then(function() {
       return User.findOne({_id : req.session._id});
     }).then(function(user, err) {
       if (err) {
-        res.status(500).json({error : "Internal Server Error"});
+        res.status(500).json({ error: "errInternal"});
         console.log(reason);
       } else if (!user) {
-        res.status(404).json({error : "User Not Found"});
+        res.status(400).json({ error: "errUserNotFound"});
       } else {
         res.status(200).json(user);
       }
     }).catch(function(reason) {
-      res.status(500).json({error : "Internal Server Error"});
+      res.status(500).json({ error: "errInternal"});
       console.log(reason);
     });
   } else {
-    res.status(400).json({error : "No logged in user"});
+    res.status(400).json({error : "errNoSignedInUser"});
   }
 });
 
@@ -596,9 +595,9 @@ router.get('/_/email/:user_email', function(req, res, next) {
     return User.findOne({email: email}, {trophies:0});
   }).then(function(user, err) {
     if (err) {
-      console.log(err); res.status(500).json({error : "Internal Server Error"});
+      console.log(err); res.status(500).json({ error: "errInternal"});
     } else if (!user) {
-      res.status(404).json({error : "User Not Found"});
+      res.status(400).json({ error: "errUserNotFound"});
     } else {
       res.status(200).json(user);
     }
