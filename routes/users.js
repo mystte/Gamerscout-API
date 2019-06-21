@@ -361,7 +361,10 @@ router.post('/login', function(req, res, next) {
         req.session._id = user_json._id;
         req.session.validated = user_json.validated;
         req.session.fb_id = null;
-        res.status(201).json(user_json);
+        res.status(201).json({
+          ...user_json,
+          "gamerscout-api-session": req.cookies['gamerscout-api-session'],
+        });
         } else {
           res.status(400).json({error : "errWrongPassword"});
         }
