@@ -305,6 +305,11 @@ router.post('/signup', function(req, res, next) {
           sendValidateAccountEmail(createdUser.email, req.protocol + "://" + constants.CLIENT_BASE_URL, createdUser.validateAccountToken);
           return res.status(201).json({message : "success"});
         }).catch(function(error) {
+          if (error.name === "ValidationError") {
+            if (error.errors.email) return res.status(400).json({ error: 'errWrongEmail' });
+            if (error.errors.username) return res.status(400).json({ error: 'errWrongUsername' });
+            if (error.errors.password) return res.status(400).json({ error: 'errWrongPassword' });
+          }
           if (error.code === 11000) return res.status(400).json({ error: 'errUserExists' });
           return res.status(400).json({ error : error.message });
         });
