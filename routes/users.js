@@ -171,7 +171,7 @@ router.post('/facebook_auth', function(req, res, next) {
             }).then(function(user, err) {
               if (err) {
                 console.log(__filename, err);
-                res.status(500).json({error : "Internal Server Error"});
+                res.status(500).json({ error: "errInternal"});
               } else if (!user) {
                 var username = result_json.first_name + result_json.last_name;
                 var username = username.replace(" ","");
@@ -215,10 +215,10 @@ router.post('/facebook_auth', function(req, res, next) {
               }
             }).catch(function(reason) {
               console.log(__filename, reason.message);
-              res.status(500).json({error : "Internal Server Error"});
+              res.status(500).json({error : "errInternal"});
             });
           } else {
-            res.status(400).json({error : "Wrong Access Token"});
+            res.status(400).json({error : "errWrongToken"});
           }
       }).catch(function (err) {
           // Crawling failed...
