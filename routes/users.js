@@ -196,7 +196,10 @@ router.post('/facebook_auth', function(req, res, next) {
                   req.session.email = result_json.email;
                   req.session._id = _id;
                   req.session.fb_id = result_json.id;
-                  return res.status(201).json(format_login_export(user_json));
+                  return res.status(201).json({
+                    ...format_login_export(user_json),
+                    "gamerscout-api-session": req.cookies['gamerscout-api-session'],
+                  });
                 });
               } else {
                 // Login the found user
@@ -210,7 +213,10 @@ router.post('/facebook_auth', function(req, res, next) {
                   req.session._id = user_json._id;
                   req.session.fb_id = result_json.id;
                   req.session.validated = user_json.validated;
-                  return res.status(201).json(format_login_export(user_json));
+                  return res.status(201).json({
+                    ...format_login_export(user_json),
+                    "gamerscout-api-session": req.cookies['gamerscout-api-session'],
+                  });
                 });
               }
             }).catch(function(reason) {
@@ -221,9 +227,9 @@ router.post('/facebook_auth', function(req, res, next) {
             res.status(400).json({error : "errWrongToken"});
           }
       }).catch(function (err) {
-          // Crawling failed...
-          console.log(__filename, reason.message);
-          res.status(500).json({error : "Internal Server Error"});
+        // Crawling failed...
+        console.log(__filename, reason.message);
+        res.status(500).json({ error: "errInternal"});
       });
   });
 });
