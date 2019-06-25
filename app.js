@@ -43,10 +43,10 @@ mongoose.connect(mongoConnStr, mongoOptions).then(() => {
 // Setup express sessions
 var sess = {
   secret: 'gamerscoutForever',
-  cookie: {},
+  cookie: { secure: false },
   name: "gamerscout-api-session",
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
   maxAge: 604800 * 1000, // 1 week
 }
 

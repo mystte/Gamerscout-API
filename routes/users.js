@@ -213,6 +213,7 @@ router.post('/facebook_auth', function(req, res, next) {
                   req.session._id = user_json._id;
                   req.session.fb_id = result_json.id;
                   req.session.validated = user_json.validated;
+                  console.log("######### HEREHREHRHE", req.cookies);
                   return res.status(201).json({
                     ...format_login_export(user_json),
                     "gamerscout-api-session": req.cookies['gamerscout-api-session'],
