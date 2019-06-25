@@ -68,6 +68,8 @@ var allowCrossDomain = function(req, res, next) {
   if (app.get('env') === 'development') {
     allowedOrigins.push('http://localhost:8081');
     allowedOrigins.push('http://localhost:8080');
+    allowedOrigins.push('https://local.gamerscout.dev:8080');
+    allowedOrigins.push('https://local.gamerscout.dev:8081');
   }
   const origin = req.headers.origin;
   if (allowedOrigins.indexOf(origin) > -1) {
