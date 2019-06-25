@@ -150,6 +150,7 @@ const gerUsernameRegexpForSearch = (gamertag) => {
 router.get('/config', function(req, res, next) {
   const lol_regions_short = logic_lol.get_regions_short();
   res.status(200).json({
+    facebookAppId: (environment === 'production') ? config.facebook.prod.appId : config.facebook.dev.appId,
     platforms: config.supported_platforms,
     regions: {
       riot: {
