@@ -200,11 +200,6 @@ router.get('/email_validation/:email', function (req, res, next) {
   }
 });
 
-const constructGamerJSON = gamer => {
-  const gamerJSON = gamer
-  
-}
-
 // Search a specific usertag based on the platform
 // For now we force league of legends but we'll have to refactor this once
 // we want to implement more of them (it is also ugly af :/)
@@ -220,6 +215,8 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
   const query_page = req.query.page ? +req.query.page : 1;
 
   try {
+    const platformDetails = config.supported_platforms.find( p => p.name === platform)
+    if (!platformDetails || !platformDetails.enabled) throw new Error('Not supported Platform')
     const gamerOptions = {
       gamertag: new RegExp('^' + gerUsernameRegexpForSearch(gamertag) + '$', "i"),
       region: region,
@@ -229,13 +226,13 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
     let gamerOutline;
 
     if (!gamers || gamers.length === 0) {
-      log.info(`${platform}-${game}-${gamertag} : Gamer did not exist in Mongo, querying in API...`)
+      log.info(`${platform}-${game}-${gamertag} : Gamer did not exist in Mongo, querying in API...`);
       if (region) {
-        gamerJSON = await logic_lol.getLolAccountInRegionByGamerTag(region, gamertag)
+        gamerJSON = await logic_lol.getLolAccountInRegionByGamerTag(region, gamertag);
       } else {
         gamerJSON = await logic_lol.getLol(gamertag);
       }
-      gamerOutline = await parsedGamersProfilePictures(await logic_lol.createLolGamersInDB(gamerJSON))
+      gamerOutline = await parsedGamersProfilePictures(await logic_lol.createLolGamersInDB(gamerJSON));
     } else {
       let filters = {};
       if (query_filter === 'APPROVALS') filters.review_type = 'REP';
@@ -248,20 +245,20 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
       logic_lol.computeAttributes(reviews.docs);
       await logic_lol.refreshGamerData(region, gamers);
       const updatedGamers = await getReviewerNameInReviews(gamers, reviews, loggedInuserId);
-      gamerOutline = await parsedGamersProfilePictures(updatedGamers)
+      gamerOutline = await parsedGamersProfilePictures(updatedGamers);
     }
-    const regionId = logic_lol.regions[region]
-    const championData = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id)
-    const recentMatches = await logic_lol.getRecentMatchList(regionId, gamerOutline[0].account_id)
-    const ranked = await logic_lol.getRankedData(regionId, gamerOutline[0].gamer_id)
+    const regionId = logic_lol.regions[region];
+    const championData = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id);
+    const recentMatches = await logic_lol.getRecentMatchList(regionId, gamerOutline[0].account_id);
+    const ranked = await logic_lol.getRankedData(regionId, gamerOutline[0].gamer_id);
     
-    gamerOutline[0].stats.frequent_champions = championData
-    gamerOutline[0].stats.recent = recentMatches
-    gamerOutline[0].stats.ranked = ranked
-    res.status(201).json(gamerOutline)
+    gamerOutline[0].stats.frequent_champions = championData;
+    gamerOutline[0].stats.recent = recentMatches;
+    gamerOutline[0].stats.ranked = ranked;
+    res.status(201).json(gamerOutline);
   } catch (err) {
-    log.error(`Error: ${err}`)
-    res.status(500).json({ error: 'Internal server error' })
+    log.error(`Error here: ${err}`);
+    res.status(500).json({ error: 'Internal server error' });
   }
 
 });
