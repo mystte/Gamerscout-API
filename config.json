@@ -29,6 +29,9 @@
 	"facebook_url_picture": "/picture?debug=all&format=json&method=get&pretty=0&redirect=false&suppress_http_code=1&width=360&access_token=",
 	"smtp_email": "team@gamerscout.com",
 	"smtp_password": "UHQd%O9lO903",
+	"constraints" : {
+		"maxAPIRequests": 10
+	},
 	"client": {
 		"dev": {
 			"url": "localhost:3333"
