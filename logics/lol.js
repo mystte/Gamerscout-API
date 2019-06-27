@@ -496,62 +496,57 @@ var getLeague = async function (region, league_id, page) {
   }
 }
 
-const getMatchDataForPlayer = async (matchId, region, accountId) => {
-  try {
-    let matchData = await LOLMatches.findOne({ gameId: matchId })
-    if (!matchData) {
-      log.info(`Match data not available in Mongo, calling it from Riot`)
-      const matchDataURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matches/${matchId}?api_key=${constants.LOL_API_KEY}`
-      const matchResponse = await axios.get(matchDataURL)
-      const newMatch = new LOLMatches(matchResponse.data)
-      await newMatch.save()
-      matchData = matchResponse.data
-    }
-    const { participantId } = matchData.participantIdentities.find(({ player }) =>
-      player.accountId === accountId
-    )
-    const playerDataForGame = matchData.participants.find(p => p.participantId === participantId)
-    const { teamId } = playerDataForGame
-    const teamData = matchData.teams.find(t => t.teamId === teamId)
-    const { gameId, gameCreation, gameDuration, seasonId, gameMode, gameType } = matchData
-    const win = teamData.win === 'Win' ? true : false
-    return {
-      gameId,
-      gameCreation,
-      gameDuration,
-      championId: playerDataForGame.championId,
-      seasonId,
-      gameMode,
-      gameType,
-      win,
-      player: playerDataForGame,
-      team: teamData
-    }
-  } catch (err) {
-    log.error(`Could not get match data ${err}`)
+const getMatchDataAggregate = (matchData, accountId) => {
+  if(!matchData || !accountId) return
+  const { participantId } = matchData.participantIdentities.find(({ player }) =>
+    player.accountId === accountId
+  )
+  const playerDataForGame = matchData.participants.find(p => p.participantId === participantId);
+  const { teamId } = playerDataForGame;
+  const teamData = matchData.teams.find(t => t.teamId === teamId);
+  const { gameId, gameCreation, gameDuration, seasonId, gameMode, gameType } = matchData;
+  const win = teamData.win === 'Win' ? true : false;
+  return {
+    gameId,
+    gameCreation,
+    gameDuration,
+    championId: playerDataForGame.championId,
+    seasonId,
+    gameMode,
+    gameType,
+    win,
+    player: playerDataForGame,
+    team: teamData
   }
 }
 
-const getRecentMatchData = async (accountId, matchId) => {
-  let matchData = await LOLMatches.findOne({ gameId: matchId })
-  if (!matchData) {
-    log.info(`Match data not available in Mongo, calling it from Riot`)
-    const matchDataURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matches/${matchId}?api_key=${constants.LOL_API_KEY}`
-    const matchResponse = await axios.get(matchDataURL)
-    const newMatch = new LOLMatches(matchResponse.data)
-    await newMatch.save()
-    matchData = matchResponse.data
+const getNewMatchDataForPlayer = async (matchId, region, accountId) => {
+  try {
+    log.info(`Match data not available in Mongo, calling it from Riot`);
+    const matchDataURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matches/${matchId}?api_key=${constants.LOL_API_KEY}`;
+    const matchResponse = await axios.get(matchDataURL);
+    const newMatch = new LOLMatches(matchResponse.data);
+    await newMatch.save();
+    matchData = matchResponse.data;
+    return getMatchDataAggregate(matchData, accountId);
+  } catch (err) {
+    log.error(`Could not get match data ${err}`);
   }
-  const championData = await axios.get('http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json')
-  const championJson = championData.data.data
-  const championList = Object.entries(championJson).map(d => d[1])
-  const { participants, participantIdentities, gameCreation } = matchData
+}
+
+const getRecentMatchData = async (accountId, matchId, region) => {
+  let matchData = await LOLMatches.findOne({ gameId: matchId });
+  if (!matchData) return null;
+  const championData = await axios.get('http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+  const championJson = championData.data.data;
+  const championList = Object.entries(championJson).map(d => d[1]);
+  const { participants, participantIdentities, gameCreation } = matchData;
   const { participantId } = participantIdentities.find(({ player }) =>
     player.accountId === accountId
-  )
+  );
   const playerTeamData = participantIdentities.map(({ participantId, player }) => {
-    const { championId, teamId } = participants.find(p => p.participantId === participantId)
-    const championData = championList.find(c => c.key == championId)
+    const { championId, teamId } = participants.find(p => p.participantId === participantId);
+    const championData = championList.find(c => c.key == championId);
     return {
       participantId,
       summonerId: player.summonerName,
@@ -560,15 +555,15 @@ const getRecentMatchData = async (accountId, matchId) => {
       teamId
     }
   })
-  const playerDataForGame = participants.find(p => p.participantId === participantId)
-  const { teamId, championId, stats, timeline, spell1Id, spell2Id } = playerDataForGame
-  const { kills, deaths, assists, item0, item1, item2, item3, item4, item5, item6, win, champLevel, totalMinionsKilled, totalDamageDealToChampions } = stats
-  const { lane } = timeline
-  const champion = championList.find(c => c.key == championId)
-  const kda = (kills + assists) / deaths
-  const items = [item0, item1, item2, item3, item4, item5, item6]
-  const teammates = playerTeamData.filter(p => p.teamId === teamId)
-  const opponents = playerTeamData.filter(p => p.teamId !== teamId)
+  const playerDataForGame = participants.find(p => p.participantId === participantId);
+  const { teamId, championId, stats, timeline, spell1Id, spell2Id } = playerDataForGame;
+  const { kills, deaths, assists, item0, item1, item2, item3, item4, item5, item6, win, champLevel, totalMinionsKilled, totalDamageDealToChampions } = stats;
+  const { lane } = timeline;
+  const champion = championList.find(c => c.key == championId);
+  const kda = (kills + assists) / deaths;
+  const items = [item0, item1, item2, item3, item4, item5, item6];
+  const teammates = playerTeamData.filter(p => p.teamId === teamId);
+  const opponents = playerTeamData.filter(p => p.teamId !== teamId);
   return {
     championId,
     champion: (champion || {}).name,
@@ -592,21 +587,22 @@ const getRecentMatchData = async (accountId, matchId) => {
 }
 
 const getRecentMatchList = async (region, accountId) => {
-  const matches = await getMatchListForPlayer(region, accountId)
-  const matchIds = matches.map(({ gameId }) => gameId)
+  const matches = await getMatchListForPlayer(region, accountId);
+  const matchIds = matches.map(({ gameId }) => gameId);
   const matchHistory = await Promise.all(matchIds.map(async matchId => {
-    return await getRecentMatchData(accountId, matchId)
+    return await getRecentMatchData(accountId, matchId, region);
   }))
-  const sorted = _.sortBy(matchHistory, m => m.gameCreation)
-  if (sorted.length < 20) return sorted.reverse()
-  else return sorted.slice(sorted.length - 5, sorted.length).reverse()
+  const filteredMatchHistory = matchHistory.filter(mh => mh !== null)
+  const sorted = _.sortBy(filteredMatchHistory, m => m.gameCreation);
+  if (sorted.length < 20) return sorted.reverse();
+  else return sorted.slice(sorted.length - 5, sorted.length).reverse();
 }
 
 const getMatchListForPlayer = async (region, accountId) => {
-  const matchListURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matchlists/by-account/${accountId}?api_key=${constants.LOL_API_KEY}`
-  const { data } = await axios.get(matchListURL)
-  const { matches } = data
-  return matches
+  const matchListURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matchlists/by-account/${accountId}?api_key=${constants.LOL_API_KEY}`;
+  const { data } = await axios.get(matchListURL);
+  const { matches } = data;
+  return matches;
 }
 
 // Get aggregate Stats from all matches by champion
@@ -614,49 +610,58 @@ const getMatchListForPlayer = async (region, accountId) => {
 // Otherwise we'll just return the gamer as they are
 const getMatchAggregateStatsByChampion = async (region, accountId) => {
   try {
-    const matches = await getMatchListForPlayer(region, accountId)
-    const matchIds = matches.map(({ gameId }) => gameId)
-    const allMatchData = await Promise.all(matchIds.map(async matchId => {
-      return await getMatchDataForPlayer(matchId, region, accountId)
+    const matches = await getMatchListForPlayer(region, accountId);
+    const matchIds = matches.map(({ gameId }) => gameId);
+    const knownMatchData = await Promise.all(matchIds.map(async (matchId) => {
+      const matchData = await LOLMatches.findOne({ gameId: matchId });
+      return getMatchDataAggregate(matchData, accountId);
     }))
-    const championData = await axios.get('http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json')
-    const championJson = championData.data.data
-    const championList = Object.entries(championJson).map(d => d[1])
+    const knownMatchIds = knownMatchData.map(m => (m || {}).gameId);
+    const knownSet = new Set(knownMatchIds);
+    const unknownMatchIds = matchIds.filter(id => !knownSet.has(id));
+    const limitedUnknownMatchIds = unknownMatchIds.slice(0,config.constraints.maxAPIRequests);
+    const newMatchData = await Promise.all(limitedUnknownMatchIds.map(async matchId => {
+      return await getNewMatchDataForPlayer(matchId, region, accountId);
+    }))
+    const allMatchData = knownMatchData.concat(newMatchData);
+    const championData = await axios.get('http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+    const championJson = championData.data.data;
+    const championList = Object.entries(championJson).map(d => d[1]);
     const grouped = allMatchData.reduce((acc, curr) => {
       try {
-        if (!curr) return acc
-        let { championId, player } = curr
-        const { win, kills, deaths, assists, totalDamageDealt } = player.stats
+        if (!curr) return acc;
+        let { championId, player } = curr;
+        const { win, kills, deaths, assists, totalDamageDealt } = player.stats;
         const cs = Object.keys(curr.player.timeline.creepsPerMinDeltas).reduce((a, c) => {
-          return a + (10 * curr.player.timeline.creepsPerMinDeltas[c])
+          return a + (10 * curr.player.timeline.creepsPerMinDeltas[c]);
         }, 0)
-        const kda = (kills + assists) / deaths
-        let won = 0
-        let lost = 0
-        if (win) won = 1
-        else lost = 1
-        const champion = championList.find(c => c.key == championId)
-        if (!champion) return acc
-        const { name } = champion
-        const gameStats = { kills, deaths, assists, kda }
+        const kda = (kills + assists) / deaths;
+        let won = 0;
+        let lost = 0;
+        if (win) won = 1;
+        else lost = 1;
+        const champion = championList.find(c => c.key == championId);
+        if (!champion) return acc;
+        const { name } = champion;
+        const gameStats = { kills, deaths, assists, kda };
         if (acc[name]) {
           // Track wins/losses w this champion to calculate winrate
-          if (win) acc[name].wins += 1
-          else acc[name].losses += 1
+          if (win) acc[name].wins += 1;
+          else acc[name].losses += 1;
           // bestGame/worstGame
-          if (kda > acc[name].bestGame.kda) acc[name].bestGame = gameStats
-          if (kda < acc[name].worstGame.kda) acc[name].worstGame = gameStats
-          acc[name].gamesPlayed += 1
-          acc[name].kills += kills
-          acc[name].cs += cs
-          acc[name].assists += assists
-          acc[name].deaths += deaths
-          acc[name].kda = (acc[name].kills + acc[name].assists) / acc[name].deaths
-          acc[name].winrate = acc[name].wins / acc[name].gamesPlayed
+          if (kda > acc[name].bestGame.kda) acc[name].bestGame = gameStats;
+          if (kda < acc[name].worstGame.kda) acc[name].worstGame = gameStats;
+          acc[name].gamesPlayed += 1;
+          acc[name].kills += kills;
+          acc[name].cs += cs;
+          acc[name].assists += assists;
+          acc[name].deaths += deaths;
+          acc[name].kda = (acc[name].kills + acc[name].assists) / acc[name].deaths;
+          acc[name].winrate = acc[name].wins / acc[name].gamesPlayed;
         } else {
-          let winrate
-          if (won) winrate = 1.0
-          else winrate = 0.0
+          let winrate;
+          if (won) winrate = 1.0;
+          else winrate = 0.0;
           acc[name] = {
             champion: name,
             bestGame: gameStats,
@@ -671,27 +676,26 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
             assists,
             wins: won,
             losses: lost
-          }
+          };
         }
       } catch (err) {
-        log.error(`${err}`)
+        log.error(`${err}`);
       }
-      return acc
-    }, {})
-    const sorted = _.sortBy(Object.values(grouped), u => u.gamesPlayed)
-    if (sorted.length < 5) return sorted.reverse()
-    else return sorted.slice(sorted.length - 5, sorted.length).reverse()
+      return acc;
+    }, {});
+    const sorted = _.sortBy(Object.values(grouped), u => u.gamesPlayed);
+    if (sorted.length < 5) return sorted.reverse();
+    else return sorted.slice(sorted.length - 5, sorted.length).reverse();
   } catch (err) {
-    log.error(`Error: ${err}`)
-    return {}
+    log.error(`Error: ${err}`);
+    return {};
   }
 }
 
 const getRankedData = async (region, gamerId) => {
-  const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`
-  console.log(path)
-  const {data} = await axios.get(path)
-  return data
+  const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
+  const { data } = await axios.get(path);
+  return data;
 }
 
 
