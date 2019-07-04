@@ -213,7 +213,6 @@ router.post('/facebook_auth', function(req, res, next) {
                   req.session._id = user_json._id;
                   req.session.fb_id = result_json.id;
                   req.session.validated = user_json.validated;
-                  console.log("######### HEREHREHRHE", req.cookies);
                   return res.status(201).json({
                     ...format_login_export(user_json),
                     "gamerscout-api-session": req.cookies['gamerscout-api-session'],
@@ -486,7 +485,7 @@ router.put('/:user_id/pwd', function (req, res, next) {
         return;
         // User not found
       } else if (!user) {
-        res.status(404).json({ error: "User not found" });
+        res.status(404).json({ error: "errUserNotFound" });
         // Check if the user_id is the same as the current session
       } else if (user.email == req.session.email) {
         var pwd = req.body.password ? req.body.password : user.password;
@@ -542,7 +541,7 @@ router.put('/:user_id', async function(req, res, next) {
               // }
               // user.email = email;
             } else {
-              res.status(400).json({ error: "Email " + req.body.email + " is already taken" });
+              res.status(400).json({ error: "errEmailExists" });
             }
           });
         }
@@ -551,17 +550,17 @@ router.put('/:user_id', async function(req, res, next) {
           User.findOne({ username: req.body.username }, function(error, result) {
             if (!result || (result && result._id == user_id)) {
               user.save().then((result) => {
-                res.status(201).json({ message: "User updated" });
+                res.status(201).json({ message: "success" });
               }).catch((err) => {
                 console.log(err);
               });;
             } else {
-              res.status(400).json({ error: "Display name " + req.body.username + " is already taken" });
+              res.status(400).json({ error: "errUserNameExists" });
             }
           });
         } else {
           return user.save().then((result) => {
-            res.status(201).json({ message: "User updated" });
+            res.status(201).json({ message: "success" });
           }).catch((err) => {
             console.log(err);
           });
