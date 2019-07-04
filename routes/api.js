@@ -248,11 +248,24 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
       gamerOutline = await parsedGamersProfilePictures(updatedGamers);
     }
     const regionId = logic_lol.regions[region];
-    const championData = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id);
+    const {aggregateStats, allMatchData} = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id);
     const recentMatches = await logic_lol.getRecentMatchList(regionId, gamerOutline[0].account_id);
     const ranked = await logic_lol.getRankedData(regionId, gamerOutline[0].gamer_id);
-    
-    gamerOutline[0].stats.frequent_champions = championData;
+    const rawRoles = allMatchData.map(m => m.player.timeline.lane).reduce((acc, curr) => {
+      if (acc[curr.toLowerCase()] === undefined) {
+        acc[curr.toLowerCase()] = 1;
+      } else {
+        acc[curr.toLowerCase()] += 1;
+      }
+      return acc;
+    }, {});
+    const roles = Object.keys(rawRoles).reduce( (acc, curr) => {
+      const count = rawRoles[curr];
+      acc[curr] = { count, percentage: (count / allMatchData.length)}
+      return acc
+    }, {});
+    gamerOutline[0].stats.roles = roles
+    gamerOutline[0].stats.frequent_champions = aggregateStats;
     gamerOutline[0].stats.recent = recentMatches;
     gamerOutline[0].stats.ranked = ranked;
     res.status(201).json(gamerOutline);

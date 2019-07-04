@@ -592,9 +592,9 @@ const getRecentMatchList = async (region, accountId) => {
   const matchHistory = await Promise.all(matchIds.map(async matchId => {
     return await getRecentMatchData(accountId, matchId, region);
   }))
-  const filteredMatchHistory = matchHistory.filter(mh => mh !== null)
-  const sorted = _.sortBy(filteredMatchHistory, m => m.gameCreation);
-  if (sorted.length < 20) return sorted.reverse();
+  const filteredMatchHistory = matchHistory.filter(mh => mh !== null);
+  const sorted = _.sortBy(filteredMatchHistory, 'gameCreation');
+  if (sorted.length <= 5) return sorted.reverse();
   else return sorted.slice(sorted.length - 5, sorted.length).reverse();
 }
 
@@ -611,7 +611,8 @@ const getMatchListForPlayer = async (region, accountId) => {
 const getMatchAggregateStatsByChampion = async (region, accountId) => {
   try {
     const matches = await getMatchListForPlayer(region, accountId);
-    const matchIds = matches.map(({ gameId }) => gameId);
+    const sortedMatches = _.sortBy(matches, 'timestamp').reverse().slice(0,50);
+    const matchIds = sortedMatches.map(({ gameId }) => gameId);
     const knownMatchData = await Promise.all(matchIds.map(async (matchId) => {
       const matchData = await LOLMatches.findOne({ gameId: matchId });
       return getMatchDataAggregate(matchData, accountId);
@@ -684,8 +685,10 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
       return acc;
     }, {});
     const sorted = _.sortBy(Object.values(grouped), u => u.gamesPlayed);
-    if (sorted.length < 5) return sorted.reverse();
-    else return sorted.slice(sorted.length - 5, sorted.length).reverse();
+    let aggregateStats;
+    if (sorted.length < 5) aggregateStats = sorted.reverse()
+    else aggregateStats = sorted.slice(sorted.length - 5, sorted.length).reverse();
+    return { allMatchData, aggregateStats}
   } catch (err) {
     log.error(`Error: ${err}`);
     return {};
