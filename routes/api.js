@@ -15,6 +15,7 @@ const User = require('../models/user');
 const ObjectId = require('mongoose').Types.ObjectId;
 const slack = require('../utils/slack');
 const environment = require('../global').environment;
+const _ = require('lodash')
 const log = require('color-logs')(isLogEnabled = true, isDebugEnabled = true, __filename);
 
 
@@ -264,6 +265,22 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
       acc[curr] = { count, percentage: (count / allMatchData.length)}
       return acc
     }, {});
+    const trendData = allMatchData.map( m => {
+      const {kills, deaths, assists} = m.player.stats
+      const {gameCreation} = m
+      const {creepsPerMinDeltas} = m.player.timeline
+      if(!m || !creepsPerMinDeltas) return
+      let kda
+      if(deaths === 0) kda = 0
+      else kda = (kills + assists) / deaths
+      const cs = Object.keys(creepsPerMinDeltas).reduce((acc, curr) => {
+        acc += (creepsPerMinDeltas[curr] * 10)
+        return acc
+      }, 0 )
+      return { cs, kda, gameCreation }
+    }).filter( m => m !== null)
+
+    gamerOutline[0].stats.trends = _.sortBy(trendData, 'gameCreation')
     gamerOutline[0].stats.roles = roles
     gamerOutline[0].stats.frequent_champions = aggregateStats;
     gamerOutline[0].stats.recent = recentMatches;
