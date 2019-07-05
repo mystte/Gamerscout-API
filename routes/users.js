@@ -44,6 +44,10 @@ var format_login_export = function(user) {
   return user;
 }
 
+const sendValidateNewAccountEmail = (email, host, token) => {
+
+}
+
 var sendValidateAccountEmail = function (email, host, token) {
   // setup e-mail data with unicode symbols
   var mailOptions = {
@@ -532,6 +536,8 @@ router.put('/:user_id', async function(req, res, next) {
         user.date_of_birth = date_of_birth;
         user.gender = gender;
         user.password = pwd;
+        user.emailToValidate = email;
+        user.email = email;
         // Check if email is already taken
         if (req.body.email) {
           await User.findOne({ email: req.body.email }, function (error, result) {

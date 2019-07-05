@@ -45,6 +45,7 @@ var userSchema = new Schema({
        validate: [validateEmail, 'Please provide a valid email address'],
        index: { unique: true }
       },
+  emailToValidate: { type: String },
   validateAccountToken: String,
   validated: { type: Boolean, default: false },
   usedEmails: [String],
