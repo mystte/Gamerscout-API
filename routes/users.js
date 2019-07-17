@@ -158,6 +158,43 @@ router.post('/twitter_auth', function(req, res, next) {
     });
 })
 
+router.post('/validate_password', async function (req, res, next) {
+  if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'errAuthenticationRequired' });
+  const userEmail = req.session.email;
+  const password = req.body.password ? req.body.password : null;
+
+  const currentUser = await User.findOne({ email: userEmail });
+  const isMatch = await currentUser.comparePassword(password, currentUser.password);
+
+  if (isMatch) {
+    res.status(200).json({ message: 'success' });
+  } else {
+    res.status(400).json({ error: 'errWrongPassword' });
+  }
+});
+
+router.post('/add_facebook', async function(req, res, next) {
+  return res.status(400).json({ error: "errApiDisabled" });
+  const token = req.body.token ? req.body.token : null;
+
+  const facebookProfile = JSON.parse(await request(config.facebook_url + "/" + config.facebook_url_profile + token));
+
+  console.log(facebookProfile);
+  if (facebookProfile.email && facebookProfile.id) {
+    const facebookUserExists = (await User.findOne({ email: facebookProfile.email }, { twitter_id: 0, __v: 0 })).email;
+
+    if (facebookUserExists && req.session.email !== facebookUserExists) {
+      res.status(400).json({ error: "errUserExists" });
+    } else {
+      console.log(facebookUserExists);
+
+      res.status(200).json({ message: "success" });
+    }
+  } else {
+    res.status(400).json({ error: "errWrongToken" });
+  }
+});
+
 // Facebook login
 router.post('/facebook_auth', function(req, res, next) {
   var _id = mongoose.Types.ObjectId();
