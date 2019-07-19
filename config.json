@@ -30,7 +30,7 @@
 	"smtp_email": "team@gamerscout.com",
 	"smtp_password": "UHQd%O9lO903",
 	"constraints" : {
-		"maxAPIRequests": 25
+		"maxAPIRequests": 10
 	},
 	"client": {
 		"dev": {
