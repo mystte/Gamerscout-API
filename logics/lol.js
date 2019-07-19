@@ -92,7 +92,6 @@ var computeAttributes = function (reviews) {
 var lolRequestGetSummonerByGamertag = function (region, username, json) {
   const lolRegion = regions[region];
   var url = "https://" + lolRegion + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/by-name/" + username + "?api_key=" + constants.LOL_API_KEY;
-  console.log(url);
   return Q().then(function () {
     return request(url);
   }).then(function (body) {
@@ -113,7 +112,6 @@ var lolRequestGetSummonerByGamertag = function (region, username, json) {
 var lolRequestGetSummonerByGamerId = function (region, gamerId, json) {
   const lolRegion = regions[region];
   var url = "https://" + lolRegion + ".api.riotgames.com/lol/summoner/" + config.lol_api.version + "/summoners/" + gamerId + "?api_key=" + constants.LOL_API_KEY;
-  console.log(url);
   return Q().then(function () {
     return request(url);
   }).then(function (body) {
@@ -497,13 +495,27 @@ var getLeague = async function (region, league_id, page) {
 }
 
 const getMatchDataAggregate = (matchData, accountId) => {
-  if(!matchData || !accountId) return
+  if (!matchData || !accountId) return
   const { participantId } = matchData.participantIdentities.find(({ player }) =>
     player.accountId === accountId
   )
   const playerDataForGame = matchData.participants.find(p => p.participantId === participantId);
   const { teamId } = playerDataForGame;
   const teamData = matchData.teams.find(t => t.teamId === teamId);
+  const teamKDARaw = matchData.participants.reduce((acc, curr) => {
+    if(curr.teamId === teamId){
+      const { kills, deaths, assists} = curr.stats
+      acc.kills += kills
+      acc.deaths += deaths
+      acc.assists += assists
+    }
+    return acc
+  },{
+      kills: 0,
+      deaths: 0,
+      assists: 0
+    })
+  const teamKDA = (teamKDARaw.kills + teamKDARaw.assists) / teamKDARaw.deaths
   const { gameId, gameCreation, gameDuration, seasonId, gameMode, gameType } = matchData;
   const win = teamData.win === 'Win' ? true : false;
   return {
@@ -516,7 +528,8 @@ const getMatchDataAggregate = (matchData, accountId) => {
     gameType,
     win,
     player: playerDataForGame,
-    team: teamData
+    team: teamData,
+    teamKDA
   }
 }
 
@@ -611,7 +624,7 @@ const getMatchListForPlayer = async (region, accountId) => {
 const getMatchAggregateStatsByChampion = async (region, accountId) => {
   try {
     const matches = await getMatchListForPlayer(region, accountId);
-    const sortedMatches = _.sortBy(matches, 'timestamp').reverse().slice(0,50);
+    const sortedMatches = _.sortBy(matches, 'timestamp').reverse().slice(0, 50);
     const matchIds = sortedMatches.map(({ gameId }) => gameId);
     const knownMatchData = await Promise.all(matchIds.map(async (matchId) => {
       const matchData = await LOLMatches.findOne({ gameId: matchId });
@@ -620,12 +633,17 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
     const knownMatchIds = knownMatchData.map(m => (m || {}).gameId);
     const knownSet = new Set(knownMatchIds);
     const unknownMatchIds = matchIds.filter(id => !knownSet.has(id));
-    const limitedUnknownMatchIds = unknownMatchIds.slice(0,config.constraints.maxAPIRequests);
+    const limitedUnknownMatchIds = unknownMatchIds.slice(0, config.constraints.maxAPIRequests);
     const newMatchData = await Promise.all(limitedUnknownMatchIds.map(async matchId => {
       return await getNewMatchDataForPlayer(matchId, region, accountId);
     }))
     const allMatchData = knownMatchData.concat(newMatchData);
-    const championData = await axios.get('http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+    let championData;
+    try {
+      championData = await axios.get('https://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+    } catch (err) {
+      championData = require('../data/champions.json')
+    }
     const championJson = championData.data.data;
     const championList = Object.entries(championJson).map(d => d[1]);
     const grouped = allMatchData.reduce((acc, curr) => {
@@ -688,7 +706,7 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
     let aggregateStats;
     if (sorted.length < 5) aggregateStats = sorted.reverse()
     else aggregateStats = sorted.slice(sorted.length - 5, sorted.length).reverse();
-    return { allMatchData, aggregateStats}
+    return { allMatchData, aggregateStats }
   } catch (err) {
     log.error(`Error: ${err}`);
     return {};
