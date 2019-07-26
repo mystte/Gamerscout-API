@@ -225,7 +225,6 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
     let gamers = await Gamer.find(gamerOptions);
     let gamerJSON;
     let gamerOutline;
-
     if (!gamers || gamers.length === 0) {
       log.info(`${platform}-${game}-${gamertag} : Gamer did not exist in Mongo, querying in API...`);
       if (region) {

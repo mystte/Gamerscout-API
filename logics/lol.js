@@ -550,7 +550,12 @@ const getNewMatchDataForPlayer = async (matchId, region, accountId) => {
 const getRecentMatchData = async (accountId, matchId, region) => {
   let matchData = await LOLMatches.findOne({ gameId: matchId });
   if (!matchData) return null;
-  const championData = await axios.get('http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+  let championData;
+    try {
+      championData = await axios.get('https://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+    } catch (err) {
+      championData = require('../data/champions.json')
+  }
   const championJson = championData.data.data;
   const championList = Object.entries(championJson).map(d => d[1]);
   const { participants, participantIdentities, gameCreation } = matchData;
@@ -601,6 +606,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
 
 const getRecentMatchList = async (region, accountId) => {
   const matches = await getMatchListForPlayer(region, accountId);
+  if(!matches) return []
   const matchIds = matches.map(({ gameId }) => gameId);
   const matchHistory = await Promise.all(matchIds.map(async matchId => {
     return await getRecentMatchData(accountId, matchId, region);
@@ -612,10 +618,15 @@ const getRecentMatchList = async (region, accountId) => {
 }
 
 const getMatchListForPlayer = async (region, accountId) => {
-  const matchListURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matchlists/by-account/${accountId}?api_key=${constants.LOL_API_KEY}`;
-  const { data } = await axios.get(matchListURL);
-  const { matches } = data;
-  return matches;
+  try {
+    const matchListURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matchlists/by-account/${accountId}?api_key=${constants.LOL_API_KEY}`;
+    const { data } = await axios.get(matchListURL);
+    const { matches } = data;
+    return matches;
+  } catch(err) {
+    log.error(`No matches found for this user`)
+    return null
+  }
 }
 
 // Get aggregate Stats from all matches by champion
