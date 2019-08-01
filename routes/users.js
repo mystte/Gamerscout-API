@@ -556,7 +556,7 @@ router.put('/:user_id', async function(req, res, next) {
         return;
       // User not found
       } else if (!user) {
-        res.status(400).json({ error: "errUserNotFound"});
+        return res.status(400).json({ error: "errUserNotFound"});
       // Check if the user_id is the same as the current session
       } else if (user.email == req.session.email) {
         var username = req.body.username ? req.body.username : user.username;
@@ -572,7 +572,12 @@ router.put('/:user_id', async function(req, res, next) {
         user.last_name = last_name;
         user.date_of_birth = date_of_birth;
         user.gender = gender;
-        user.password = pwd;
+        const isSamePassword = await user.comparePassword(pwd, user.password);
+        if (!isSamePassword) {
+          user.password = pwd;
+        } else {
+          return res.status(400).json({ error: "errSamePassword" });
+        }
         user.emailToValidate = email;
         user.email = email;
         // Check if email is already taken

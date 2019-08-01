@@ -7,8 +7,8 @@ var SALT_WORK_FACTOR = 10;
 var strings_utils = require('../utils/strings');
 
 // Validator for the password's length
-function pwdMinLength (pwd) {
-  return pwd.length > 3;
+function pwdMinLength(pwd) {
+  return pwd.length >= 6;
 };
 
 // Validator for username's length
@@ -50,8 +50,8 @@ var userSchema = new Schema({
   validated: { type: Boolean, default: false },
   usedEmails: [String],
   password: { type: String, required: true,
-        validate: [pwdMinLength, 'Password must be 4 char minimum'],
-        validate: [validatePassword, 'Password cannot have spaces']}, // 4 characters min, no spaces
+        validate: [pwdMinLength, 'Password must be 6 char minimum'],
+        validate: [validatePassword, 'Password cannot have spaces']}, // 6 characters min, no spaces
   gender: {type: String, default: 'unknown'},
   avatar: { type: String, default: null },
   first_name: {type: String, default: null},
