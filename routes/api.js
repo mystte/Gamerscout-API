@@ -335,18 +335,18 @@ router.get('/gamer/:gamer_id', function(req, res, next) {
 router.post('/account/validate', function(req, res, next) {
   var token = req.body.token ? req.body.token : null;
 
-  if (!token) res.status(406).json({ error: "Missing token" });
+  if (!token) res.status(400).json({ error: "errMissingToken" });
 
   User.findOne({ validateAccountToken: token }).then((user, error) => {
     if (!user) {
-      res.status(404).json({ error: "No matching user" });
+      res.status(400).json({ error: "errWrongToken" });
     } else if (user && user.validated) {
-      res.status(406).json({ error: "Account already validated" });
+      res.status(400).json({ error: "errWrongToken" });
     } else {
-      user.validateAccountToken = 'done';
+      user.validateAccountToken = "done";
       user.validated = true;
       user.save();
-      res.status(201).json({ msg: "Account validated" });
+      res.status(201).json({ msg: "success" });
     }
   });
 });

@@ -44,10 +44,6 @@ var format_login_export = function(user) {
   return user;
 }
 
-const sendValidateNewAccountEmail = (email, host, token) => {
-
-}
-
 var sendValidateAccountEmail = function (email, host, token) {
   // setup e-mail data with unicode symbols
   var mailOptions = {
@@ -69,13 +65,6 @@ var sendValidateAccountEmail = function (email, host, token) {
   });
 }
 
-var twitterAPI = require('node-twitter-api');
-var twitter = new twitterAPI({
-  consumerKey: config.twitter_consumer_key,
-  consumerSecret: config.twitter_consumer_secret,
-  callback: 'https://localhost:3333/api/1/users/accessToken'
-});
-
 // Get all users
 router.get('/', function(req, res, next) {
   return Q().then(function() {
@@ -91,71 +80,6 @@ router.get('/', function(req, res, next) {
     console.log(err);
     res.status(500).json({error : "Internal Server Error"});
   });
-})
-
-// Twitter login
-router.post('/twitter_auth', function(req, res, next) {
-  var _id = mongoose.Types.ObjectId();
-  var params = {
-      'include_entities' : true,
-      'include_email' : true
-  };
-  var access_token = req.body.auth_token ? req.body.auth_token : null;
-  var access_secret = req.body.auth_token_secret ? req.body.auth_token_secret : null;
-  var user_json = null;
-
-  twitter.verifyCredentials(access_token, access_secret, params, function(err, user) {
-      if (err) {
-        console.log(__filename, err);
-        res.status(500).json({error : "Internal Server Error"});
-      } else {
-          tw_user = JSON.parse(JSON.stringify(user));
-          return Q().then(function() {
-            return User.findOne({email : tw_user.email}, {facebook_id: 0, __v: 0});
-          }).then(function(user, err) {
-            if (err) {
-              console.log(__filename, err);
-              res.status(500).json({error : "Internal Server Error"});
-            } else if (!user) {
-              // Create a user if the user doesn't exist
-          var newUser = new User({
-            _id : _id,
-            twitter_id : tw_user.id_str,
-            username : tw_user.screen_name,
-            password : "fb" + tw_user.id + "&&" + tw_user.email,
-            email : tw_user.email,
-            gender : 'unknown',
-            avatar : tw_user.profile_image_url_https,
-            first_name : null,
-            last_name : null,
-            date_of_birth : null
-          });
-          return Q().then(function() {
-            user_json = JSON.parse(JSON.stringify(newUser));
-            return newUser.save();
-          }).then(function() {
-            req.session.email = tw_user.email;
-            req.session._id = _id;
-            return res.status(201).json(format_login_export(user_json));
-          });
-            } else {
-          // Login the found user
-          return Q().then(function() {
-            user.avatar = tw_user.profile_image_url_https;
-            user_json = JSON.parse(JSON.stringify(user));
-            return user.save()
-          }).then(function() {
-            req.session.email = tw_user.email;
-            req.session._id = user._id;
-            return res.status(201).json(format_login_export(user_json));
-          });
-            }
-          }).catch(function(reason) {
-            console.log(__filename, reason.message);
-            res.status(500).json({error : "Internal Server Error"});
-          });
-      }
-    });
 })
 
 router.post('/validate_password', async function (req, res, next) {
@@ -692,51 +616,6 @@ router.get('/:user_id', function(req, res, next) {
     console.log(reason.message);
     res.status(500).json({error : "Internal Server Error"});
   });
-});
-
-// Get credits when buying an item with real money
-router.post('/:user_id/check_package/:platform_type', function(req, res, next) {
-  if (req.session.email) {
-    var user_id = req.params.user_id ? req.params.user_id : null;
-    var platform_type = req.params.platform_type ? req.params.platform_type : null;
-    var receipt = req.body.receipt ? req.body.receipt : null;
-
-    return Q().then(function() {
-      return User.findOne({_id : user_id});
-    }).then(function(user, err) {
-      if (err) {
-        console.log(__filename, err);
-        res.status(500).json({error : "Internal Server Error"}); return Q.reject();
-      } else if (!user) {
-        res.status(404).json({error : "No User Found"}); return Q.reject();
-      } else if (user.email != req.session.email) {
-        res.status(403).json({error : "Trying to modify another user's email"}); return Q.reject();
-      } else {
-        if (platform_type == "ios") {
-          return ios_inapp_purchase.validateIos(req.body.receipt_data);
-        } else if (platform_type == "android") {
-          res.status(400).json({error : "Android development in progress..."}); return Q.reject();
-        } else {
-          res.status(400).json({error : "Wrong / Missing Platform Type"}); return Q.reject();
-        }
-      }
-    }).then(function(result) {
-      if (result.valid == true) {
-        res.status(201).json(result);
-        // Store the receipt in the db if the purchase went well
-        var new_receipt = new Receipt(JSON.parse(JSON.stringify(result.body.receipt)));
-        new_receipt.save();
-      } else {
-        // Something went wrong on Apple/Google side when validating the receipt
-        res.status(result.req_status).json({message : result.data});
-      }
-    }).catch(function(reason) {
-      console.log(__filename, err);
-      res.status(500).json({error : "Internal Server Error"}); return false;
-    });
-  } else {
-    res.status(401).json({error : "Authentication required"});
-  }
 });
 
 module.exports = router;
