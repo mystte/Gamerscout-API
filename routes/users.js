@@ -55,8 +55,8 @@ var sendValidateAccountEmail = function (email, host, token) {
     to: email, // list of receivers
     subject: 'Validate your account', // Subject line
     text: 'You are receiving this email because you (or someone else) have created an account on Gamerscout.\n\n' +
-    'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-    host + '/validate-account/' + token + '\n\n' +
+    'Please click on the following link, or paste this into your browser to complete the validation process:\n\n' +
+    host + '/v/' + token + '\n\n' +
       'If you did not request this, please ignore this email.\n'
   };
   // send mail with defined transport object
@@ -296,7 +296,7 @@ router.post('/validation/email/resend', function(req, res, next) {
       user.validateAccountToken = strings_utils.generateRandomString(28);
       user.save().then(() => {
         sendValidateAccountEmail(req.session.email, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
-        res.status(201).json({ msg: 'OK' });
+        res.status(201).json({ msg: 'success' });
       });
     }
   });
