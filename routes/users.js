@@ -98,20 +98,22 @@ router.post('/validate_password', async function (req, res, next) {
 });
 
 router.post('/add_facebook', async function(req, res, next) {
-  return res.status(400).json({ error: "errApiDisabled" });
+  // return res.status(400).json({ error: "errApiDisabled" });
+  if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'authentication required' });
   const token = req.body.token ? req.body.token : null;
 
   const facebookProfile = JSON.parse(await request(config.facebook_url + "/" + config.facebook_url_profile + token));
 
-  console.log(facebookProfile);
   if (facebookProfile.email && facebookProfile.id) {
-    const facebookUserExists = (await User.findOne({ email: facebookProfile.email }, { twitter_id: 0, __v: 0 })).email;
+    const facebookUser = await User.findOne({ $or: [{ email: facebookProfile.email }, { facebookEmail: facebookProfile.email }] }, { twitter_id: 0, __v: 0 });
+    const facebookUserExists = (facebookUser !== null);
 
-    if (facebookUserExists && req.session.email !== facebookUserExists) {
+    if (facebookUserExists) {
       res.status(400).json({ error: "errUserExists" });
     } else {
-      console.log(facebookUserExists);
-
+      const loggedUser = await User.findOne({ $or: [{ email: req.session.email }, { facebookEmail: req.session.email }] }, { twitter_id: 0, __v: 0 });
+      loggedUser.facebookEmail = facebookProfile.email;
+      await loggedUser.save();
       res.status(200).json({ message: "success" });
     }
   } else {
@@ -132,7 +134,7 @@ router.post('/facebook_auth', function(req, res, next) {
           if (result_json.email && result_json.id) {
             var uri = req.protocol + "://" + req.header('host') + '/api/1/users/login';
             return Q().then(function() {
-              return User.findOne({email : result_json.email}, {twitter_id: 0, __v: 0});
+              return User.findOne({ $or: [{ email: result_json.email }, { facebookEmail: result_json.email }]}, {twitter_id: 0, __v: 0});
             }).then(function(user, err) {
               if (err) {
                 console.log(__filename, err);
@@ -146,7 +148,7 @@ router.post('/facebook_auth', function(req, res, next) {
                   facebook_id : result_json.id,
                   username : username,
                   password : "fb" + result_json.id + "&&" + result_json.email,
-                  email : result_json.email,
+                  facebookEmail : result_json.email,
                   gender : result_json.gender ? result_json.gender : 'unknown',
                   avatar : picture_json.data.url,
                   first_name : result_json.first_name ? result_json.first_name : null,
