@@ -201,16 +201,20 @@ router.post('/facebook_auth', function(req, res, next) {
   });
 });
 
-router.post('/facebook_disconnect', function(req, res, next) {
+router.post('/facebook_disconnect', async function(req, res) {
   if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'authentication required' });
-  return User.findOne({_id: req.session._id}).then((user, err) => {
-    if (err) res.status(400).json({ error: err });
-    if (user) user.facebook_id = 0;
-    user.save();
-    res.status(201).json({ message: 'OK' });
-  }).catch((reason) => {
-    res.status(500).json({ error: reason });
-  });
+  const foundUser = await User.findOne({ _id: req.session._id });
+
+  if (!foundUser.facebookEmail) return res.status(400).json({ error: 'errNoFacebookEmail' });
+  if (foundUser.facebookEmail && !foundUser.email) return res.status(400).json({ error: 'errNoRegisteredEmail' });
+  if (foundUser.facebookEmail) {
+    foundUser.facebook_id = 0;
+    foundUser.facebookEmail = null;
+  }
+
+  await foundUser.save();
+
+  res.status(201).json({ message: 'success' });
 });
 
 router.post('/validation/email/resend', function(req, res, next) {

@@ -22,6 +22,12 @@ function validateEmail(email) {
   return re.test(email);
 };
 
+// Regex for email validation
+function validateFacebookEmail(email) {
+  const re = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+  return re.test(email) || email === null;
+};
+
 // Regex for username validation
 function validateUsername(username) {
   const re = /^\w+$/;
@@ -47,7 +53,7 @@ var userSchema = new Schema({
       },
   facebookEmail: {
     type: String,
-    validate: [validateEmail, 'Please provide a valid email address'],
+    validate: [validateFacebookEmail, 'Please provide a valid email address'],
     index: { unique: true }
   },
   emailToValidate: { type: String },
