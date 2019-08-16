@@ -343,9 +343,12 @@ router.post('/account/validate', function(req, res, next) {
     } else if (user && user.validated) {
       res.status(400).json({ error: "errWrongToken" });
     } else {
+      if (user.emailToValidate) user.email = user.emailToValidate;
+      user.emailToValidate = null;
       user.validateAccountToken = "done";
       user.validated = true;
       user.save();
+      if (user.emailToValidate) req.session.email = user.emailToValidate;
       res.status(201).json({ msg: "success" });
     }
   });

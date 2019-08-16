@@ -65,6 +65,25 @@ var sendValidateAccountEmail = function (email, host, token) {
   });
 }
 
+var sendUpdateEmailNotification = function (email, host) {
+  // setup e-mail data with unicode symbols
+  var mailOptions = {
+    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address
+    to: email, // list of receivers
+    subject: 'Update on your Gamerscout account', // Subject line
+    text: 'You are receiving this email because you (or someone else) have updated your gamerscout email.\n\n' +
+      'If you did request this, please ignore this email. Otherwise, please get in touch with us as soon as possible\n'
+  };
+  // send mail with defined transport object
+  transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      return console.log(error);
+    }
+    console.log('Message sent: ' + info.response);
+    return true;
+  });
+}
+
 // Get all users
 router.get('/', function(req, res, next) {
   return Q().then(function() {
@@ -87,7 +106,10 @@ router.post('/validate_password', async function (req, res, next) {
   const userEmail = req.session.email;
   const password = req.body.password ? req.body.password : null;
 
-  const currentUser = await User.findOne({ email: userEmail });
+  const currentUser = await User.findOne({ $or: [{ email: userEmail }, { facebookEmail: userEmail }] });
+
+  if (!currentUser) return res.status(400).json({ error: 'errUserNotFound' });
+
   const isMatch = await currentUser.comparePassword(password, currentUser.password);
 
   if (isMatch) {
@@ -171,10 +193,14 @@ router.post('/facebook_auth', function(req, res, next) {
               } else {
                 // Login the found user
                 return Q().then(function() {
+                  if (user.email && !user.facebookEmail) {
+                    user.facebookEmail = user.email;
+                    user.email = null;
+                  }
                   user.avatar = picture_json.data.url;
                   user.facebook_id = result_json.id;
                   user_json = JSON.parse(JSON.stringify(user));
-                  return user.save()
+                  return user.save();
                 }).then(function() {
                   req.session.email = result_json.email;
                   req.session._id = user_json._id;
@@ -219,13 +245,14 @@ router.post('/facebook_disconnect', async function(req, res) {
 
 router.post('/validation/email/resend', function(req, res, next) {
   if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'authentication required' });
-  User.findOne({ email: req.session.email }).then((user) => {
+  User.findOne({ $or: [{ email: req.session.email }, { facebookEmail: req.session.email }] }).then((user) => {
     if (!user) {
       res.status(404).json({ error: 'User not found' });
     } else {
+      const receiverEmail = user.emailToValidate ? user.emailToValidate : req.session.email;
       user.validateAccountToken = strings_utils.generateRandomString(28);
       user.save().then(() => {
-        sendValidateAccountEmail(req.session.email, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
+        sendValidateAccountEmail(receiverEmail, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
         res.status(201).json({ msg: 'success' });
       });
     }
@@ -488,14 +515,14 @@ router.put('/:user_id', async function(req, res, next) {
       } else if (!user) {
         return res.status(400).json({ error: "errUserNotFound"});
       // Check if the user_id is the same as the current session
-      } else if (user.email == req.session.email) {
+      } else if (user.email == req.session.email || user.facebookEmail === req.session.email) {
         var username = req.body.username ? req.body.username : user.username;
         var first_name = req.body.first_name ? req.body.first_name : user.first_name;
         var last_name = req.body.last_name ? req.body.last_name : user.last_name;
         var date_of_birth = req.body.date_of_birth ? req.body.date_of_birth : user.date_of_birth;
         var gender = req.body.gender ? req.body.gender : user.gender;
         var pwd = req.body.password ? req.body.password : user.password;
-        var email = req.body.email ? req.body.email : user.email;
+        var email = req.body.email ? req.body.email : null;
 
         user.username = username;
         user.first_name = first_name;
@@ -508,48 +535,52 @@ router.put('/:user_id', async function(req, res, next) {
         } else {
           return res.status(400).json({ error: "errSamePassword" });
         }
-        user.emailToValidate = email;
-        user.email = email;
-        // Check if email is already taken
-        if (req.body.email) {
-          await User.findOne({ email: req.body.email }, function (error, result) {
-            if (!result || (result && result._id == user_id)) {
-              // if (user.usedEmails.indexOf(email) === -1) {
-              //   user.usedEmails.push(user.email);
-              // }
-              // user.email = email;
-            } else {
-              res.status(400).json({ error: "errEmailExists" });
-            }
-          });
+
+        if (email) {
+          // We cannot change user email directly
+          user.validateAccountToken = strings_utils.generateRandomString(28);
+          user.emailToValidate = email;
+          user.validated = false;
         }
         // Check if username is already taken
         if (req.body.username) {
           User.findOne({ username: req.body.username }, function(error, result) {
             if (!result || (result && result._id == user_id)) {
-              user.save().then((result) => {
+              user.save().then(() => {
+                // If we have a new email, we send back the validation email
+                if (email) {
+                  sendUpdateEmailNotification(req.session.email);
+                  sendValidateAccountEmail(email, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
+                }
                 res.status(201).json({ message: "success" });
               }).catch((err) => {
                 console.log(err);
-              });;
+              });
             } else {
               res.status(400).json({ error: "errUserNameExists" });
             }
           });
         } else {
-          return user.save().then((result) => {
+          return user.save().then(() => {
+            // If we have a new email, we send back the validation email
+            if (email) {
+              sendUpdateEmailNotification(req.session.email);
+              sendValidateAccountEmail(email, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
+            }
             res.status(201).json({ message: "success" });
           }).catch((err) => {
             console.log(err);
           });
         }
 
+      } else {
+        res.status(401).json({ error: "errWrongUserId" });
       }
     }).catch(function(reason) {
       console.log(__filename, reason.message);
     });
   } else {
-    res.status(401).json({error : "Authentication required"});
+    res.status(401).json({error : "errAuthenticationRequired"});
   }
 });
 

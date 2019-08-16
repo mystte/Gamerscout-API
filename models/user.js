@@ -19,12 +19,6 @@ function userNameMinLength (v) {
 // Regex for email validation
 function validateEmail(email) {
   const re = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  return re.test(email);
-};
-
-// Regex for email validation
-function validateFacebookEmail(email) {
-  const re = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
   return re.test(email) || email === null;
 };
 
@@ -47,13 +41,13 @@ var userSchema = new Schema({
         validate: [userNameMinLength, 'Username must be 1 char minimum'],
         index: { unique: true }
         }, // more than one char
-  email: { type: String, required: true,
+  email: { type: String,
        validate: [validateEmail, 'Please provide a valid email address'],
        index: { unique: true }
       },
   facebookEmail: {
     type: String,
-    validate: [validateFacebookEmail, 'Please provide a valid email address'],
+    validate: [validateEmail, 'Please provide a valid email address'],
     index: { unique: true }
   },
   emailToValidate: { type: String },
