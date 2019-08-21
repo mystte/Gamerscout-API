@@ -233,6 +233,7 @@ router.post('/facebook_disconnect', async function(req, res) {
   const foundUser = await User.findOne({ _id: req.session._id });
 
   if (!foundUser.facebookEmail) return res.status(400).json({ error: 'errNoFacebookEmail' });
+  if (foundUser.isAutomaticGeneratedPwd) return res.status(400).json({ error: 'errPasswordUpdateRequired' });
   if (foundUser.facebookEmail) {
     if (!foundUser.email) foundUser.email = foundUser.facebookEmail;
     foundUser.facebook_id = 0;
@@ -467,36 +468,6 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
     }
   } else {
     res.status(401).json({error : "Authentication required"});
-  }
-});
-
-// Modify loggedin user password
-router.put('/:user_id/pwd', function (req, res, next) {
-  if (req.session.email) {
-    var user_id = req.params.user_id ? req.params.user_id : null;
-
-    return Q().then(function () {
-      return User.findOne({ _id: user_id });
-    }).then(function (user, err) {
-      if (err) {
-        res.status(400).json({ error: err });
-        return;
-        // User not found
-      } else if (!user) {
-        res.status(404).json({ error: "errUserNotFound" });
-        // Check if the user_id is the same as the current session
-      } else if (user.email == req.session.email) {
-        var pwd = req.body.password ? req.body.password : user.password;
-
-        user.password = pwd;
-        res.status(201).json({ message: "Pwd updated" });
-        return user.save();
-      }
-    }).catch(function (reason) {
-      console.log(__filename, reason.message);
-    });
-  } else {
-    res.status(401).json({ error: "Authentication required" });
   }
 });
 
