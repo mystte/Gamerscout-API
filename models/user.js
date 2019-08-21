@@ -64,7 +64,8 @@ var userSchema = new Schema({
   date_of_birth: {type: Date, default: null},
   newsletter: {type: Boolean, default: false},
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  isAutomaticGeneratedPwd: { type: Boolean, default: false },
 }, { usePushEach: true });
 
 // Add pagination plugin

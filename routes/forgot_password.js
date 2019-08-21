@@ -42,6 +42,7 @@ router.post('/:token', function(req, res, next) {
         user.password = md5(req.body.password);
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
+        user.isAutomaticGeneratedPwd = false;
         user.save();
         logic_forgot_password.send_change_password_success_email(user.email);
         res.redirect('/reset/_/password_updated');

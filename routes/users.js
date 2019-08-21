@@ -175,7 +175,8 @@ router.post('/facebook_auth', function(req, res, next) {
                   avatar : picture_json.data.url,
                   first_name : result_json.first_name ? result_json.first_name : null,
                   last_name : result_json.last_name ? result_json.last_name : null,
-                  date_of_birth : result.birthday
+                  date_of_birth : result.birthday,
+                  isAutomaticGeneratedPwd: true,
                 });
                 return Q().then(function() {
                   user_json = JSON.parse(JSON.stringify(newUser));
@@ -232,8 +233,8 @@ router.post('/facebook_disconnect', async function(req, res) {
   const foundUser = await User.findOne({ _id: req.session._id });
 
   if (!foundUser.facebookEmail) return res.status(400).json({ error: 'errNoFacebookEmail' });
-  if (foundUser.facebookEmail && !foundUser.email) return res.status(400).json({ error: 'errNoRegisteredEmail' });
   if (foundUser.facebookEmail) {
+    if (!foundUser.email) foundUser.email = foundUser.facebookEmail;
     foundUser.facebook_id = 0;
     foundUser.facebookEmail = null;
   }
@@ -406,10 +407,9 @@ router.post('/logout', function(req, res, next) {
 router.post('/forgotten_password', function(req, res, next) {
   var found_user = null;
   var email = req.body.email ? req.body.email : null;
-  var app_id = req.headers["x-api-client-id"] ? req.headers["x-api-client-id"] : null;
 
   if (email) {
-    User.findOne({email : email}, function(err, user) {
+    User.findOne({ $or: [{ email }, { facebookEmail: email }] }, function(err, user) {
       if (err) {
         res.status(400).json({error : err});
         return;
@@ -532,6 +532,7 @@ router.put('/:user_id', async function(req, res, next) {
         const isSamePassword = await user.comparePassword(pwd, user.password);
         if (!isSamePassword) {
           user.password = pwd;
+          user.isAutomaticGeneratedPwd = false;
         } else {
           return res.status(400).json({ error: "errSamePassword" });
         }
