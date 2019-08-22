@@ -65,6 +65,27 @@ var sendValidateAccountEmail = function (email, host, token) {
   });
 }
 
+const sendValidatePasswordEmail = (email, host, token) => {
+  // setup e-mail data with unicode symbols
+  var mailOptions = {
+    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address
+    to: email, // list of receivers
+    subject: 'Password update notification', // Subject line
+    text: 'You are receiving this email because you (or someone else) have requested a new password for your Gamerscout account.\n\n' +
+      'Please click on the following link, or paste this into your browser to complete the validation process:\n\n' +
+      host + '/p/' + token + '\n\n' +
+      'If you did not request this, just ignore this email.\n'
+  };
+  // send mail with defined transport object
+  transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      return console.log(error);
+    }
+    console.log('Message sent: ' + info.response);
+    return true;
+  });
+}
+
 var sendUpdateEmailNotification = function (email, host) {
   // setup e-mail data with unicode symbols
   var mailOptions = {
@@ -355,7 +376,12 @@ router.post('/login', function(req, res, next) {
 
   if (email && password) {
     return Q().then(function() {
-      return User.findOne({ email: email }, {facebook_id : 0, twitter_id: 0, __v:0});
+      return User.findOne({ email: email }, {
+        facebook_id : 0,
+        passwordToValidate: 0,
+        twitter_id: 0,
+        __v:0
+      });
     }).then(function(user, err) {
       if (err) {
         console.log(__filename, err);
@@ -469,6 +495,48 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
   } else {
     res.status(401).json({error : "Authentication required"});
   }
+});
+
+// Generate a new password using email validation
+router.post('/newPassword', async (req, res, next) => {
+  const password = req.body.password || null;
+
+  if (!req.session.email) return res.status(401).json({ error: "errAuthenticationRequired" });
+  if (!password) return res.status(400).json({ error: "errMissingPassword" });
+
+  const loggedUser = await User.findOne({ _id: req.session._id });
+  if (!loggedUser) return res.status(400).json({ error: "errCannotFindLoggedUser" });
+
+  loggedUser.passwordToValidate = password;
+  loggedUser.resetPasswordToken = await crypto.randomBytes(20).toString('hex');
+  loggedUser.resetPasswordExpires = Date.now() + 3600000;
+
+  const result = await loggedUser.save();
+  const email = req.session.email;
+
+  if (!result) return res.status(400).json({ message: "errCannotSaveUser" });
+
+  sendValidatePasswordEmail(email, req.protocol + "://" + req.header('host'), loggedUser.resetPasswordToken);
+  return res.status(200).json({ message: "success" });
+});
+
+// Validate new requested password
+router.post('/tokenPasswordValidation', async (req, res, next) => {
+  const token = req.body.token || null;
+
+  if (!token) return res.status(400).json({ error: "errMissingToken" });
+
+  const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } });
+  if (!user) return res.status(400).json({ error: "errWrongToken" });
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  user.password = user.passwordToValidate;
+  user.passwordToValidate = undefined;
+  const result = await user.save();
+
+  if (!result) return res.status(400).json({ message: "errCannotSaveUser" });
+
+  return res.status(200).json({ message: "success" });
 });
 
 // Modify actual user settings

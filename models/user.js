@@ -54,9 +54,17 @@ var userSchema = new Schema({
   validateAccountToken: String,
   validated: { type: Boolean, default: false },
   usedEmails: [String],
-  password: { type: String, required: true,
-        validate: [pwdMinLength, 'Password must be 6 char minimum'],
-        validate: [validatePassword, 'Password cannot have spaces']}, // 6 characters min, no spaces
+  password: {
+    type: String,
+    required: true,
+    validate: [pwdMinLength, 'Password must be 6 char minimum'],
+    validate: [validatePassword, 'Password cannot have spaces']}, // 6 characters min, no spaces
+  passwordToValidate: {
+    type: String,
+    default: null,
+    validate: [pwdMinLength, 'Password must be 6 char minimum'],
+    validate: [validatePassword, 'Password cannot have spaces'],
+  },
   gender: {type: String, default: 'unknown'},
   avatar: { type: String, default: null },
   first_name: {type: String, default: null},
