@@ -498,7 +498,7 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
 });
 
 // Generate a new password using email validation
-router.post('/newPassword', async (req, res, next) => {
+router.post('/newPasswordRequest', async (req, res, next) => {
   const password = req.body.password || null;
 
   if (!req.session.email) return res.status(401).json({ error: "errAuthenticationRequired" });
