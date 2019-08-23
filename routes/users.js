@@ -198,6 +198,7 @@ router.post('/facebook_auth', function(req, res, next) {
                   last_name : result_json.last_name ? result_json.last_name : null,
                   date_of_birth : result.birthday,
                   isAutomaticGeneratedPwd: true,
+                  validateAccountToken: strings_utils.generateRandomString(28),
                 });
                 return Q().then(function() {
                   user_json = JSON.parse(JSON.stringify(newUser));
@@ -207,6 +208,7 @@ router.post('/facebook_auth', function(req, res, next) {
                   req.session.email = result_json.email;
                   req.session._id = _id;
                   req.session.fb_id = result_json.id;
+                  sendValidateAccountEmail(result_json.email, req.protocol + "://" + constants.CLIENT_BASE_URL, newUser.validateAccountToken);
                   return res.status(201).json({
                     ...format_login_export(user_json),
                     "gamerscout-api-session": req.cookies['gamerscout-api-session'],
