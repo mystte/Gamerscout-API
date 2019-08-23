@@ -315,13 +315,6 @@ router.post('/signup', function(req, res, next) {
     });
     return Q().then(function() {
       return User.findOne({ email: email });
-      // Disabled for now
-      // if (emailExist) {
-      //   return User.findOne({email : email});
-      // } else {
-      //   return User.findOne({ email: email });
-      //   return res.status(400).json({error : "Email does not exists"});
-      // }
     }).then(function(user, err) {
       if (err) {
         console.log(__filename, err);
