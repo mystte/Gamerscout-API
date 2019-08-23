@@ -511,7 +511,7 @@ router.post('/newPasswordRequest', async (req, res, next) => {
 
   if (!result) return res.status(400).json({ message: "errCannotSaveUser" });
 
-  sendValidatePasswordEmail(email, req.protocol + "://" + req.header('host'), loggedUser.resetPasswordToken);
+  sendValidatePasswordEmail(email, req.protocol + "://" + req.CLIENT_BASE_URL, loggedUser.resetPasswordToken);
   return res.status(200).json({ message: "success" });
 });
 
