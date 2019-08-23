@@ -504,7 +504,6 @@ router.post('/newPasswordRequest', async (req, res, next) => {
   loggedUser.passwordToValidate = password;
   loggedUser.resetPasswordToken = await crypto.randomBytes(20).toString('hex');
   loggedUser.resetPasswordExpires = Date.now() + 3600000;
-  loggedUser.isAutomaticGeneratedPwd = false;
 
   const result = await loggedUser.save();
   const email = req.session.email;
