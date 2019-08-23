@@ -377,7 +377,6 @@ router.post('/login', function(req, res, next) {
   if (email && password) {
     return Q().then(function() {
       return User.findOne({ email: email }, {
-        facebook_id : 0,
         passwordToValidate: 0,
         twitter_id: 0,
         __v:0
@@ -510,6 +509,7 @@ router.post('/newPasswordRequest', async (req, res, next) => {
   loggedUser.passwordToValidate = password;
   loggedUser.resetPasswordToken = await crypto.randomBytes(20).toString('hex');
   loggedUser.resetPasswordExpires = Date.now() + 3600000;
+  loggedUser.isAutomaticGeneratedPwd = false;
 
   const result = await loggedUser.save();
   const email = req.session.email;
