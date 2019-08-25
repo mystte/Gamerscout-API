@@ -510,7 +510,7 @@ router.post('/newPasswordRequest', async (req, res, next) => {
 
   if (!result) return res.status(400).json({ message: "errCannotSaveUser" });
 
-  sendValidatePasswordEmail(email, req.protocol + "://" + req.CLIENT_BASE_URL, loggedUser.resetPasswordToken);
+  sendValidatePasswordEmail(email, req.protocol + "://" + constants.CLIENT_BASE_URL, loggedUser.resetPasswordToken);
   return res.status(200).json({ message: "success" });
 });
 
@@ -524,6 +524,7 @@ router.post('/tokenPasswordValidation', async (req, res, next) => {
   if (!user) return res.status(400).json({ error: "errWrongToken" });
   user.resetPasswordToken = undefined;
   user.resetPasswordExpires = undefined;
+  user.isAutomaticGeneratedPwd = false;
   user.password = user.passwordToValidate;
   user.passwordToValidate = undefined;
   const result = await user.save();
