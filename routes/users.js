@@ -148,16 +148,25 @@ router.post('/add_facebook', async function(req, res, next) {
   const facebookProfile = JSON.parse(await request(config.facebook_url + "/" + config.facebook_url_profile + token));
 
   if (facebookProfile.email && facebookProfile.id) {
-    const facebookUser = await User.findOne({ $or: [{ email: facebookProfile.email }, { facebookEmail: facebookProfile.email }] }, { twitter_id: 0, __v: 0 });
+    const facebookUser = await User.findOne({
+      $or: [
+        { email: facebookProfile.email },
+        { facebookEmail: facebookProfile.email }
+      ], _id: { $ne : req.session._id } },
+      { twitter_id: 0, __v: 0 });
     const facebookUserExists = (facebookUser !== null);
 
     if (facebookUserExists) {
       res.status(400).json({ error: "errUserExists" });
     } else {
-      const loggedUser = await User.findOne({ $or: [{ email: req.session.email }, { facebookEmail: req.session.email }] }, { twitter_id: 0, __v: 0 });
+      const loggedUser = await User.findOne({ $or: [{ email: req.session.email }, { facebookEmail: req.session.email }]}, { twitter_id: 0, __v: 0 });
       loggedUser.facebookEmail = facebookProfile.email;
+      loggedUser.facebook_id = facebookProfile.id;
       await loggedUser.save();
-      res.status(200).json({ message: "success" });
+      res.status(200).json({
+        facebookEmail: facebookProfile.email,
+        facebookId: facebookProfile.id,
+      });
     }
   } else {
     res.status(400).json({ error: "errWrongToken" });
@@ -638,7 +647,7 @@ router.get('/_/authenticated', function(req, res, next) {
       console.log(reason);
     });
   } else {
-    res.status(200).json({});
+    res.status(200).json({ });
   }
 });
 
