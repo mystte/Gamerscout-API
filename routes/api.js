@@ -153,6 +153,7 @@ const gerUsernameRegexpForSearch = (gamertag) => {
 router.get('/config', function (req, res, next) {
   const lol_regions_short = logic_lol.get_regions_short();
   res.status(200).json({
+    facebookAppId: (environment === 'production') ? config.facebook.prod.appId : config.facebook.dev.appId,
     platforms: config.supported_platforms,
     regions: {
       riot: {
@@ -364,18 +365,21 @@ router.get('/gamer/:gamer_id', function (req, res, next) {
 router.post('/account/validate', function (req, res, next) {
   var token = req.body.token ? req.body.token : null;
 
-  if (!token) res.status(406).json({ error: "Missing token" });
+  if (!token) res.status(400).json({ error: "errMissingToken" });
 
   User.findOne({ validateAccountToken: token }).then((user, error) => {
     if (!user) {
-      res.status(404).json({ error: "No matching user" });
+      res.status(400).json({ error: "errWrongToken" });
     } else if (user && user.validated) {
-      res.status(406).json({ error: "Account already validated" });
+      res.status(400).json({ error: "errWrongToken" });
     } else {
-      user.validateAccountToken = 'done';
+      if (user.emailToValidate) user.email = user.emailToValidate;
+      user.emailToValidate = null;
+      user.validateAccountToken = "done";
       user.validated = true;
       user.save();
-      res.status(201).json({ msg: "Account validated" });
+      if (user.emailToValidate) req.session.email = user.emailToValidate;
+      res.status(201).json({ msg: "success" });
     }
   });
 });

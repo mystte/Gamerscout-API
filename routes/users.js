@@ -23,7 +23,7 @@ var upload = multer({ dest: 'public/images/avatars' });
 // Allowed images types
 var allowed_images = ["image/jpeg", "image/png", "image/jpg"];
 
-// create reusable transporter object using the default SMTP transport 
+// create reusable transporter object using the default SMTP transport
 var transporter = nodemailer.createTransport({
   host: 'mail.privateemail.com',
   port: 465,
@@ -45,17 +45,17 @@ var format_login_export = function(user) {
 }
 
 var sendValidateAccountEmail = function (email, host, token) {
-  // setup e-mail data with unicode symbols 
+  // setup e-mail data with unicode symbols
   var mailOptions = {
-    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address 
-    to: email, // list of receivers 
-    subject: 'Validate your account', // Subject line 
+    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address
+    to: email, // list of receivers
+    subject: 'Validate your account', // Subject line
     text: 'You are receiving this email because you (or someone else) have created an account on Gamerscout.\n\n' +
-    'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-    host + '/validate-account/' + token + '\n\n' +
+    'Please click on the following link, or paste this into your browser to complete the validation process:\n\n' +
+    host + '/v/' + token + '\n\n' +
       'If you did not request this, please ignore this email.\n'
   };
-  // send mail with defined transport object 
+  // send mail with defined transport object
   transporter.sendMail(mailOptions, function (error, info) {
     if (error) {
       return console.log(error);
@@ -65,12 +65,45 @@ var sendValidateAccountEmail = function (email, host, token) {
   });
 }
 
-var twitterAPI = require('node-twitter-api');
-var twitter = new twitterAPI({
-  consumerKey: config.twitter_consumer_key,
-  consumerSecret: config.twitter_consumer_secret,
-  callback: 'https://localhost:3333/api/1/users/accessToken'
-});
+const sendValidatePasswordEmail = (email, host, token) => {
+  // setup e-mail data with unicode symbols
+  var mailOptions = {
+    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address
+    to: email, // list of receivers
+    subject: 'Password update notification', // Subject line
+    text: 'You are receiving this email because you (or someone else) have requested a new password for your Gamerscout account.\n\n' +
+      'Please click on the following link, or paste this into your browser to complete the validation process:\n\n' +
+      host + '/p/' + token + '\n\n' +
+      'If you did not request this, just ignore this email.\n'
+  };
+  // send mail with defined transport object
+  transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      return console.log(error);
+    }
+    console.log('Message sent: ' + info.response);
+    return true;
+  });
+}
+
+var sendUpdateEmailNotification = function (email, host) {
+  // setup e-mail data with unicode symbols
+  var mailOptions = {
+    from: '"Gamerscout " <no-reply@gamerscout.com>', // sender address
+    to: email, // list of receivers
+    subject: 'Update on your Gamerscout account', // Subject line
+    text: 'You are receiving this email because you (or someone else) have updated your gamerscout email.\n\n' +
+      'If you did request this, please ignore this email. Otherwise, please get in touch with us as soon as possible\n'
+  };
+  // send mail with defined transport object
+  transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      return console.log(error);
+    }
+    console.log('Message sent: ' + info.response);
+    return true;
+  });
+}
 
 // Get all users
 router.get('/', function(req, res, next) {
@@ -89,77 +122,63 @@ router.get('/', function(req, res, next) {
   });
 })
 
-// Twitter login
-router.post('/twitter_auth', function(req, res, next) {
-  var _id = mongoose.Types.ObjectId();
-  var params = {
-      'include_entities' : true,
-      'include_email' : true
-  };
-  var access_token = req.body.auth_token ? req.body.auth_token : null;
-  var access_secret = req.body.auth_token_secret ? req.body.auth_token_secret : null;
-  var user_json = null;
+router.post('/validate_password', async function (req, res, next) {
+  if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'errAuthenticationRequired' });
+  const userEmail = req.session.email;
+  const password = req.body.password ? req.body.password : null;
 
-  twitter.verifyCredentials(access_token, access_secret, params, function(err, user) {
-      if (err) {
-        console.log(__filename, err);
-        res.status(500).json({error : "Internal Server Error"});
-      } else {
-          tw_user = JSON.parse(JSON.stringify(user));
-          return Q().then(function() {
-            return User.findOne({email : tw_user.email}, {facebook_id: 0, __v: 0});
-          }).then(function(user, err) {
-            if (err) {
-              console.log(__filename, err);
-              res.status(500).json({error : "Internal Server Error"});
-            } else if (!user) {
-              // Create a user if the user doesn't exist
-          var newUser = new User({
-            _id : _id,
-            twitter_id : tw_user.id_str,
-            username : tw_user.screen_name,
-            password : "fb" + tw_user.id + "&&" + tw_user.email,
-            email : tw_user.email,
-            gender : 'unknown',
-            avatar : tw_user.profile_image_url_https,
-            first_name : null,
-            last_name : null,
-            date_of_birth : null
-          });
-          return Q().then(function() {
-            user_json = JSON.parse(JSON.stringify(newUser));
-            return newUser.save();
-          }).then(function() {
-            req.session.email = tw_user.email;
-            req.session._id = _id;
-            return res.status(201).json(format_login_export(user_json));
-          });
-            } else {
-          // Login the found user
-          return Q().then(function() {
-            user.avatar = tw_user.profile_image_url_https;
-            user_json = JSON.parse(JSON.stringify(user));
-            return user.save()
-          }).then(function() {
-            req.session.email = tw_user.email;
-            req.session._id = user._id;
-            return res.status(201).json(format_login_export(user_json));
-          });
-            }
-          }).catch(function(reason) {
-            console.log(__filename, reason.message);
-            res.status(500).json({error : "Internal Server Error"});
-          });
-      }
-    });
-})
+  const currentUser = await User.findOne({ $or: [{ email: userEmail }, { facebookEmail: userEmail }] });
+
+  if (!currentUser) return res.status(400).json({ error: 'errUserNotFound' });
+
+  const isMatch = await currentUser.comparePassword(password, currentUser.password);
+
+  if (isMatch) {
+    res.status(200).json({ message: 'success' });
+  } else {
+    res.status(400).json({ error: 'errWrongPassword' });
+  }
+});
+
+router.post('/add_facebook', async function(req, res, next) {
+  // return res.status(400).json({ error: "errApiDisabled" });
+  if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'authentication required' });
+  const token = req.body.token ? req.body.token : null;
+
+  const facebookProfile = JSON.parse(await request(config.facebook_url + "/" + config.facebook_url_profile + token));
+
+  if (facebookProfile.email && facebookProfile.id) {
+    const facebookUser = await User.findOne({
+      $or: [
+        { email: facebookProfile.email },
+        { facebookEmail: facebookProfile.email }
+      ], _id: { $ne : req.session._id } },
+      { twitter_id: 0, __v: 0 });
+    const facebookUserExists = (facebookUser !== null);
+
+    if (facebookUserExists) {
+      res.status(400).json({ error: "errUserExists" });
+    } else {
+      const loggedUser = await User.findOne({ $or: [{ email: req.session.email }, { facebookEmail: req.session.email }]}, { twitter_id: 0, __v: 0 });
+      loggedUser.facebookEmail = facebookProfile.email;
+      loggedUser.facebook_id = facebookProfile.id;
+      await loggedUser.save();
+      res.status(200).json({
+        facebookEmail: facebookProfile.email,
+        facebookId: facebookProfile.id,
+      });
+    }
+  } else {
+    res.status(400).json({ error: "errWrongToken" });
+  }
+});
 
 // Facebook login
 router.post('/facebook_auth', function(req, res, next) {
   var _id = mongoose.Types.ObjectId();
   var access_token = req.body.access_token ? req.body.access_token : null;
   var user_json = null;
-  
+
   request(config.facebook_url + "/" + config.facebook_url_profile + access_token).then(function (result) { // Get facebook profile
     var result_json = JSON.parse(result);
     request(config.facebook_url + "/" + result_json.id + config.facebook_url_picture + access_token).then(function(picture_result) { // Get facebook profile picture
@@ -167,11 +186,11 @@ router.post('/facebook_auth', function(req, res, next) {
           if (result_json.email && result_json.id) {
             var uri = req.protocol + "://" + req.header('host') + '/api/1/users/login';
             return Q().then(function() {
-              return User.findOne({email : result_json.email}, {twitter_id: 0, __v: 0});
+              return User.findOne({ $or: [{ email: result_json.email }, { facebookEmail: result_json.email }]}, {twitter_id: 0, __v: 0});
             }).then(function(user, err) {
               if (err) {
                 console.log(__filename, err);
-                res.status(500).json({error : "Internal Server Error"});
+                res.status(500).json({ error: "errInternal"});
               } else if (!user) {
                 var username = result_json.first_name + result_json.last_name;
                 var username = username.replace(" ","");
@@ -181,12 +200,14 @@ router.post('/facebook_auth', function(req, res, next) {
                   facebook_id : result_json.id,
                   username : username,
                   password : "fb" + result_json.id + "&&" + result_json.email,
-                  email : result_json.email,
+                  facebookEmail : result_json.email,
                   gender : result_json.gender ? result_json.gender : 'unknown',
                   avatar : picture_json.data.url,
                   first_name : result_json.first_name ? result_json.first_name : null,
                   last_name : result_json.last_name ? result_json.last_name : null,
-                  date_of_birth : result.birthday
+                  date_of_birth : result.birthday,
+                  isAutomaticGeneratedPwd: true,
+                  validateAccountToken: strings_utils.generateRandomString(28),
                 });
                 return Q().then(function() {
                   user_json = JSON.parse(JSON.stringify(newUser));
@@ -196,60 +217,77 @@ router.post('/facebook_auth', function(req, res, next) {
                   req.session.email = result_json.email;
                   req.session._id = _id;
                   req.session.fb_id = result_json.id;
-                  return res.status(201).json(format_login_export(user_json));
+                  sendValidateAccountEmail(result_json.email, req.protocol + "://" + constants.CLIENT_BASE_URL, newUser.validateAccountToken);
+                  return res.status(201).json({
+                    ...format_login_export(user_json),
+                    "gamerscout-api-session": req.cookies['gamerscout-api-session'],
+                  });
                 });
               } else {
                 // Login the found user
                 return Q().then(function() {
+                  if (user.email && !user.facebookEmail) {
+                    user.facebookEmail = user.email;
+                    user.email = null;
+                  }
                   user.avatar = picture_json.data.url;
                   user.facebook_id = result_json.id;
                   user_json = JSON.parse(JSON.stringify(user));
-                  return user.save()
+                  return user.save();
                 }).then(function() {
                   req.session.email = result_json.email;
                   req.session._id = user_json._id;
                   req.session.fb_id = result_json.id;
                   req.session.validated = user_json.validated;
-                  return res.status(201).json(format_login_export(user_json));
+                  return res.status(201).json({
+                    ...format_login_export(user_json),
+                    "gamerscout-api-session": req.cookies['gamerscout-api-session'],
+                  });
                 });
               }
             }).catch(function(reason) {
               console.log(__filename, reason.message);
-              res.status(500).json({error : "Internal Server Error"});
+              res.status(500).json({error : "errInternal"});
             });
           } else {
-            res.status(400).json({error : "Wrong Access Token"});
+            res.status(400).json({error : "errWrongToken"});
           }
       }).catch(function (err) {
-          // Crawling failed...
-          console.log(__filename, reason.message);
-          res.status(500).json({error : "Internal Server Error"});
+        // Crawling failed...
+        console.log(__filename, reason.message);
+        res.status(500).json({ error: "errInternal"});
       });
   });
 });
 
-router.post('/facebook_disconnect', function(req, res, next) {
+router.post('/facebook_disconnect', async function(req, res) {
   if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'authentication required' });
-  return User.findOne({_id: req.session._id}).then((user, err) => {
-    if (err) res.status(400).json({ error: err });
-    if (user) user.facebook_id = 0;
-    user.save();
-    res.status(201).json({ message: 'OK' });
-  }).catch((reason) => {
-    res.status(500).json({ error: reason });
-  });
+  const foundUser = await User.findOne({ _id: req.session._id });
+
+  if (!foundUser.facebookEmail) return res.status(400).json({ error: 'errNoFacebookEmail' });
+  if (foundUser.isAutomaticGeneratedPwd) return res.status(400).json({ error: 'errPasswordUpdateRequired' });
+  if (foundUser.facebookEmail) {
+    if (!foundUser.email) foundUser.email = foundUser.facebookEmail;
+    foundUser.facebook_id = 0;
+    foundUser.facebookEmail = null;
+  }
+
+  await foundUser.save();
+
+  res.status(201).json({ message: 'success' });
 });
 
 router.post('/validation/email/resend', function(req, res, next) {
   if (!req.session.email && !req.session._id) return res.status(403).json({ error: 'authentication required' });
-  User.findOne({ email: req.session.email }).then((user) => {
+  User.findOne({ $or: [{ email: req.session.email }, { facebookEmail: req.session.email }] }).then((user) => {
     if (!user) {
       res.status(404).json({ error: 'User not found' });
     } else {
+      const receiverEmail = user.emailToValidate ? user.emailToValidate : req.session.email;
       user.validateAccountToken = strings_utils.generateRandomString(28);
       user.save().then(() => {
-        sendValidateAccountEmail(req.session.email, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
-        res.status(201).json({ msg: 'OK' });
+        sendValidateAccountEmail(receiverEmail, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
+        res.status(201).json({ msg: 'success' });
       });
     }
   });
@@ -269,7 +307,7 @@ router.post('/signup', function(req, res, next) {
   var newsletter = req.body.newsletter ? req.body.newsletter : false;
 
   if (!username || !password || !email) {
-    res.status(400).json({error : 'Mandatory field missing.'});
+    res.status(400).json({ error: 'errMissingParam'});
   } else {
     // Create the new user
     var newUser = new User({
@@ -286,26 +324,24 @@ router.post('/signup', function(req, res, next) {
     });
     return Q().then(function() {
       return User.findOne({ email: email });
-      // Disabled for now
-      // if (emailExist) {
-      //   return User.findOne({email : email});
-      // } else {
-      //   return User.findOne({ email: email });
-      //   return res.status(400).json({error : "Email does not exists"});
-      // }
     }).then(function(user, err) {
       if (err) {
         console.log(__filename, err);
-        return res.status(500).json({error : "Internal Server Error"});
+        return res.status(500).json({error : "errInternal"});
       } else if (user) {
-        return res.status(400).json({error : "User already exists"});
+        return res.status(400).json({error : "errUserExists"});
       } else {
         newUser.save().then(function(createdUser) {
           if (environment === 'production') slack.slackNotificationSubscriptions('Congratulation boyz!!! You have a new gamer in your community : `' + username + '`');
           sendValidateAccountEmail(createdUser.email, req.protocol + "://" + constants.CLIENT_BASE_URL, createdUser.validateAccountToken);
-          return res.status(201).json({message : "User created"});
+          return res.status(201).json({message : "success"});
         }).catch(function(error) {
-          if (error.code === 11000) return res.status(400).json({ error: 'Display name already exists' });
+          if (error.name === "ValidationError") {
+            if (error.errors.email) return res.status(400).json({ error: 'errWrongEmail' });
+            if (error.errors.username) return res.status(400).json({ error: 'errWrongUsername' });
+            if (error.errors.password) return res.status(400).json({ error: 'errWrongPassword' });
+          }
+          if (error.code === 11000) return res.status(400).json({ error: 'errUserExists' });
           return res.status(400).json({ error : error.message });
         });
       }
@@ -325,7 +361,7 @@ router.delete('/delete/:user_id', function(req, res, next) {
       res.status(400).json({error : err});
       return;
     } else if (!user) {
-      res.status(404).json({error : "User not found"});
+      res.status(404).json({ error: "errUserNotFound"});
       return;
     } else {
       // Remove the user from the database
@@ -344,13 +380,17 @@ router.post('/login', function(req, res, next) {
 
   if (email && password) {
     return Q().then(function() {
-      return User.findOne({ email: email }, {facebook_id : 0, twitter_id: 0, __v:0});
+      return User.findOne({ email: email }, {
+        passwordToValidate: 0,
+        twitter_id: 0,
+        __v:0
+      });
     }).then(function(user, err) {
       if (err) {
         console.log(__filename, err);
-        res.status(500).json({error : "Internal Server Error"}); return Q.reject();
+        res.status(500).json({ error: "errInternal"}); return Q.reject();
       } else if (!user) {
-        res.status(404).json({error : "User Not Found"}); return Q.reject();
+        res.status(400).json({ error: "errUserNotFound"}); return Q.reject();
       } else {
         user_json = JSON.parse(JSON.stringify(user));
         return user.comparePassword(password, user.password);
@@ -361,16 +401,19 @@ router.post('/login', function(req, res, next) {
         req.session._id = user_json._id;
         req.session.validated = user_json.validated;
         req.session.fb_id = null;
-        res.status(201).json(user_json);
+        res.status(201).json({
+          ...user_json,
+          "gamerscout-api-session": req.cookies['gamerscout-api-session'],
+        });
         } else {
-          res.status(400).json({error : "Wrong password"});
+          res.status(400).json({error : "errWrongPassword"});
         }
     }).catch(function(reason) {
         console.log(__filename, reason.message);
-        res.status(500).json({error : "Internal Server Error"});
+        res.status(500).json({error : "errInternal"});
     });
   } else {
-    res.status(400).json({error : 'login or password missing'});
+    res.status(400).json({error : 'errMissingParam'});
   }
 });
 
@@ -382,11 +425,11 @@ router.post('/logout', function(req, res, next) {
       if(err){
         res.status(400).json({error : err});
       } else {
-        res.status(205).json({message : "User logged out"});
+        res.status(205).json({message : "success"});
       }
     });
   } else {
-    res.status(400).json({error : "No logged in user"});
+    res.status(400).json({error : "errNoLoggedInUser"});
   }
 });
 
@@ -394,10 +437,9 @@ router.post('/logout', function(req, res, next) {
 router.post('/forgotten_password', function(req, res, next) {
   var found_user = null;
   var email = req.body.email ? req.body.email : null;
-  var app_id = req.headers["x-api-client-id"] ? req.headers["x-api-client-id"] : null;
 
   if (email) {
-    User.findOne({email : email}, function(err, user) {
+    User.findOne({ $or: [{ email }, { facebookEmail: email }] }, function(err, user) {
       if (err) {
         res.status(400).json({error : err});
         return;
@@ -410,13 +452,13 @@ router.post('/forgotten_password', function(req, res, next) {
           found_user.save();
           logic_forgot_password.send_forgot_password_email(email, req.protocol + "://" + req.header('host'), token);
         });
-        res.status(200).json({ message: "Email sent to user if it exists" });
+        res.status(200).json({ message: "success" });
       } else { // User not found
-        res.status(200).json({ message: "Email sent to user if it exists" });
+        res.status(200).json({ message: "success" });
       }
     })
   } else {
-    res.status(400).json({error : "Mail cannot be null"});
+    res.status(400).json({error : "errMissingParam"});
   }
 });
 
@@ -429,7 +471,7 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
     if (file) {
       if (allowed_images.indexOf(file.mimetype) == -1) {
         fs.unlink(file.path);
-        res.status(400).json({error : "Bad image format"});
+        res.status(400).json({error : "errBadFormat"});
       } else {
         return Q().then(function() {
           return User.findOne({_id : user_id});
@@ -437,7 +479,7 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
           if (err) {
             res.status(400).json({error : err});
           } else if (!user) {
-            res.status(400).json({error : "User not found"});
+            res.status(400).json({error : "errUserNotFound"});
           } else if (req.session.email !== user.email){
             res.status(403).json({error : "Trying to modify another user's profile"});
           } else {
@@ -458,34 +500,47 @@ router.post('/:user_id/avatar', upload.single('avatar'), function(req, res, next
   }
 });
 
-// Modify loggedin user password
-router.put('/:user_id/pwd', function (req, res, next) {
-  if (req.session.email) {
-    var user_id = req.params.user_id ? req.params.user_id : null;
+// Generate a new password using email validation
+router.post('/newPasswordRequest', async (req, res, next) => {
+  const password = req.body.password || null;
 
-    return Q().then(function () {
-      return User.findOne({ _id: user_id });
-    }).then(function (user, err) {
-      if (err) {
-        res.status(400).json({ error: err });
-        return;
-        // User not found
-      } else if (!user) {
-        res.status(404).json({ error: "User not found" });
-        // Check if the user_id is the same as the current session
-      } else if (user.email == req.session.email) {
-        var pwd = req.body.password ? req.body.password : user.password;
+  if (!req.session.email) return res.status(401).json({ error: "errAuthenticationRequired" });
+  if (!password) return res.status(400).json({ error: "errMissingPassword" });
 
-        user.password = pwd;
-        res.status(201).json({ message: "Pwd updated" });
-        return user.save();
-      }
-    }).catch(function (reason) {
-      console.log(__filename, reason.message);
-    });
-  } else {
-    res.status(401).json({ error: "Authentication required" });
-  }
+  const loggedUser = await User.findOne({ _id: req.session._id });
+  if (!loggedUser) return res.status(400).json({ error: "errCannotFindLoggedUser" });
+
+  loggedUser.passwordToValidate = password;
+  loggedUser.resetPasswordToken = await crypto.randomBytes(20).toString('hex');
+  loggedUser.resetPasswordExpires = Date.now() + 3600000;
+
+  const result = await loggedUser.save();
+  const email = req.session.email;
+
+  if (!result) return res.status(400).json({ message: "errCannotSaveUser" });
+
+  sendValidatePasswordEmail(email, req.protocol + "://" + constants.CLIENT_BASE_URL, loggedUser.resetPasswordToken);
+  return res.status(200).json({ message: "success" });
+});
+
+// Validate new requested password
+router.post('/tokenPasswordValidation', async (req, res, next) => {
+  const token = req.body.token || null;
+
+  if (!token) return res.status(400).json({ error: "errMissingToken" });
+
+  const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } });
+  if (!user) return res.status(400).json({ error: "errWrongToken" });
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  user.isAutomaticGeneratedPwd = false;
+  user.password = user.passwordToValidate;
+  user.passwordToValidate = undefined;
+  const result = await user.save();
+
+  if (!result) return res.status(400).json({ message: "errCannotSaveUser" });
+
+  return res.status(200).json({ message: "success" });
 });
 
 // Modify actual user settings
@@ -501,87 +556,98 @@ router.put('/:user_id', async function(req, res, next) {
         return;
       // User not found
       } else if (!user) {
-        res.status(404).json({error : "User not found"});
+        return res.status(400).json({ error: "errUserNotFound"});
       // Check if the user_id is the same as the current session
-      } else if (user.email == req.session.email) {
+      } else if (user.email == req.session.email || user.facebookEmail === req.session.email) {
         var username = req.body.username ? req.body.username : user.username;
         var first_name = req.body.first_name ? req.body.first_name : user.first_name;
         var last_name = req.body.last_name ? req.body.last_name : user.last_name;
         var date_of_birth = req.body.date_of_birth ? req.body.date_of_birth : user.date_of_birth;
         var gender = req.body.gender ? req.body.gender : user.gender;
         var pwd = req.body.password ? req.body.password : user.password;
-        var email = req.body.email ? req.body.email : user.email;
+        var email = req.body.email ? req.body.email : null;
 
         user.username = username;
         user.first_name = first_name;
         user.last_name = last_name;
         user.date_of_birth = date_of_birth;
         user.gender = gender;
-        user.password = pwd;
-        // Check if email is already taken
-        if (req.body.email) {
-          await User.findOne({ email: req.body.email }, function (error, result) {
-            if (!result || (result && result._id == user_id)) {
-              // if (user.usedEmails.indexOf(email) === -1) {
-              //   user.usedEmails.push(user.email);
-              // }
-              // user.email = email;
-            } else {
-              res.status(400).json({ error: "Email " + req.body.email + " is already taken" });
-            }
-          });
+        const isSamePassword = await user.comparePassword(pwd, user.password);
+        if (!isSamePassword) {
+          user.password = pwd;
+          user.isAutomaticGeneratedPwd = false;
+        } else {
+          return res.status(400).json({ error: "errSamePassword" });
+        }
+
+        if (email) {
+          // We cannot change user email directly
+          user.validateAccountToken = strings_utils.generateRandomString(28);
+          user.emailToValidate = email;
+          user.validated = false;
         }
         // Check if username is already taken
         if (req.body.username) {
           User.findOne({ username: req.body.username }, function(error, result) {
             if (!result || (result && result._id == user_id)) {
-              user.save().then((result) => {
-                res.status(201).json({ message: "User updated" });
+              user.save().then(() => {
+                // If we have a new email, we send back the validation email
+                if (email) {
+                  sendUpdateEmailNotification(req.session.email);
+                  sendValidateAccountEmail(email, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
+                }
+                res.status(201).json({ message: "success" });
               }).catch((err) => {
                 console.log(err);
-              });;
+              });
             } else {
-              res.status(400).json({ error: "Display name " + req.body.username + " is already taken" });
-            } 
+              res.status(400).json({ error: "errUserNameExists" });
+            }
           });
         } else {
-          return user.save().then((result) => {
-            res.status(201).json({ message: "User updated" });
+          return user.save().then(() => {
+            // If we have a new email, we send back the validation email
+            if (email) {
+              sendUpdateEmailNotification(req.session.email);
+              sendValidateAccountEmail(email, req.protocol + "://" + constants.CLIENT_BASE_URL, user.validateAccountToken);
+            }
+            res.status(201).json({ message: "success" });
           }).catch((err) => {
             console.log(err);
           });
         }
-        
+
+      } else {
+        res.status(401).json({ error: "errWrongUserId" });
       }
     }).catch(function(reason) {
       console.log(__filename, reason.message);
     });
   } else {
-    res.status(401).json({error : "Authentication required"});
+    res.status(401).json({error : "errAuthenticationRequired"});
   }
 });
 
 // Retrieve authenticated user profile
 router.get('/_/authenticated', function(req, res, next) {
-  console.log("session = ", req.session);
   if (req.session._id) {
     return Q().then(function() {
       return User.findOne({_id : req.session._id});
     }).then(function(user, err) {
       if (err) {
-        res.status(500).json({error : "Internal Server Error"});
+        res.status(500).json({ error: "errInternal"});
         console.log(reason);
       } else if (!user) {
-        res.status(404).json({error : "User Not Found"});
+        res.status(400).json({ error: "errUserNotFound"});
       } else {
         res.status(200).json(user);
       }
     }).catch(function(reason) {
-      res.status(500).json({error : "Internal Server Error"});
+      res.status(500).json({ error: "errInternal"});
       console.log(reason);
     });
   } else {
-    res.status(400).json({error : "No logged in user"});
+    res.status(200).json({ });
   }
 });
 
@@ -593,9 +659,9 @@ router.get('/_/email/:user_email', function(req, res, next) {
     return User.findOne({email: email}, {trophies:0});
   }).then(function(user, err) {
     if (err) {
-      console.log(err); res.status(500).json({error : "Internal Server Error"});
+      console.log(err); res.status(500).json({ error: "errInternal"});
     } else if (!user) {
-      res.status(404).json({error : "User Not Found"});
+      res.status(400).json({ error: "errUserNotFound"});
     } else {
       res.status(200).json(user);
     }
@@ -631,51 +697,6 @@ router.get('/:user_id', function(req, res, next) {
     console.log(reason.message);
     res.status(500).json({error : "Internal Server Error"});
   });
-});
-
-// Get credits when buying an item with real money
-router.post('/:user_id/check_package/:platform_type', function(req, res, next) {
-  if (req.session.email) {
-    var user_id = req.params.user_id ? req.params.user_id : null;
-    var platform_type = req.params.platform_type ? req.params.platform_type : null;
-    var receipt = req.body.receipt ? req.body.receipt : null;
-
-    return Q().then(function() {
-      return User.findOne({_id : user_id});
-    }).then(function(user, err) {
-      if (err) {
-        console.log(__filename, err);
-        res.status(500).json({error : "Internal Server Error"}); return Q.reject();
-      } else if (!user) {
-        res.status(404).json({error : "No User Found"}); return Q.reject();
-      } else if (user.email != req.session.email) {
-        res.status(403).json({error : "Trying to modify another user's email"}); return Q.reject();
-      } else {
-        if (platform_type == "ios") {
-          return ios_inapp_purchase.validateIos(req.body.receipt_data);
-        } else if (platform_type == "android") {
-          res.status(400).json({error : "Android development in progress..."}); return Q.reject();
-        } else {
-          res.status(400).json({error : "Wrong / Missing Platform Type"}); return Q.reject();
-        }
-      }
-    }).then(function(result) {
-      if (result.valid == true) {
-        res.status(201).json(result);
-        // Store the receipt in the db if the purchase went well
-        var new_receipt = new Receipt(JSON.parse(JSON.stringify(result.body.receipt)));
-        new_receipt.save();
-      } else {
-        // Something went wrong on Apple/Google side when validating the receipt
-        res.status(result.req_status).json({message : result.data});
-      }
-    }).catch(function(reason) {
-      console.log(__filename, err);
-      res.status(500).json({error : "Internal Server Error"}); return false;
-    });
-  } else {
-    res.status(401).json({error : "Authentication required"});
-  }
 });
 
 module.exports = router;

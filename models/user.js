@@ -7,8 +7,8 @@ var SALT_WORK_FACTOR = 10;
 var strings_utils = require('../utils/strings');
 
 // Validator for the password's length
-function pwdMinLength (pwd) {
-  return pwd.length > 3;
+function pwdMinLength(pwd) {
+  return pwd.length >= 6;
 };
 
 // Validator for username's length
@@ -19,7 +19,7 @@ function userNameMinLength (v) {
 // Regex for email validation
 function validateEmail(email) {
   const re = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  return re.test(email);
+  return re.test(email) || email === null;
 };
 
 // Regex for username validation
@@ -41,16 +41,30 @@ var userSchema = new Schema({
         validate: [userNameMinLength, 'Username must be 1 char minimum'],
         index: { unique: true }
         }, // more than one char
-  email: { type: String, required: true,
+  email: { type: String,
        validate: [validateEmail, 'Please provide a valid email address'],
        index: { unique: true }
       },
+  facebookEmail: {
+    type: String,
+    validate: [validateEmail, 'Please provide a valid email address'],
+    index: { unique: true }
+  },
+  emailToValidate: { type: String },
   validateAccountToken: String,
   validated: { type: Boolean, default: false },
   usedEmails: [String],
-  password: { type: String, required: true,
-        validate: [pwdMinLength, 'Password must be 4 char minimum'],
-        validate: [validatePassword, 'Password cannot have spaces']}, // 4 characters min, no spaces
+  password: {
+    type: String,
+    required: true,
+    validate: [pwdMinLength, 'Password must be 6 char minimum'],
+    validate: [validatePassword, 'Password cannot have spaces']}, // 6 characters min, no spaces
+  passwordToValidate: {
+    type: String,
+    default: null,
+    validate: [pwdMinLength, 'Password must be 6 char minimum'],
+    validate: [validatePassword, 'Password cannot have spaces'],
+  },
   gender: {type: String, default: 'unknown'},
   avatar: { type: String, default: null },
   first_name: {type: String, default: null},
@@ -58,7 +72,8 @@ var userSchema = new Schema({
   date_of_birth: {type: Date, default: null},
   newsletter: {type: Boolean, default: false},
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  isAutomaticGeneratedPwd: { type: Boolean, default: false },
 }, { usePushEach: true });
 
 // Add pagination plugin
