@@ -249,16 +249,16 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
       gamerOutline = await parsedGamersProfilePictures(updatedGamers);
     }
     const regionId = logic_lol.regions[region];
-    const {aggregateStats, allMatchData} = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id);
+    const { aggregateStats, allMatchData } = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id);
     const recentMatches = await logic_lol.getRecentMatchList(regionId, gamerOutline[0].account_id);
     const ranked = await logic_lol.getRankedData(regionId, gamerOutline[0].gamer_id);
     const rawRoles = allMatchData
-      .map(m => {
-        if(!m) return null
-        return m.player.timeline.lane
+      .map((m) => {
+        if (!m) return null;
+        return m.player.timeline.lane;
       })
       .reduce((acc, curr) => {
-        if(!curr) return acc
+        if (!curr) return acc;
         if (acc[curr.toLowerCase()] === undefined) {
           acc[curr.toLowerCase()] = 1;
         } else {
@@ -266,29 +266,29 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
         }
         return acc;
       }, {});
-    const roles = Object.keys(rawRoles).reduce( (acc, curr) => {
+    const roles = Object.keys(rawRoles).reduce((acc, curr) => {
       const count = rawRoles[curr];
-      acc[curr] = { count, percentage: (count / allMatchData.length)}
-      return acc
+      acc[curr] = { count, percentage: (count / allMatchData.length) };
+      return acc;
     }, {});
-    const trendData = allMatchData.map( m => {
-      if(!m) return
-      const {kills, deaths, assists} = m.player.stats
-      const {gameCreation, teamKDA} = m
-      const {creepsPerMinDeltas} = m.player.timeline
-      if(!creepsPerMinDeltas) return
-      let kda
-      if(deaths === 0) kda = 0
-      else kda = (kills + assists) / deaths
+    const trendData = allMatchData.map((m) => {
+      if (!m) return;
+      const { kills, deaths, assists } = m.player.stats;
+      const { gameCreation, teamKDA } = m;
+      const { creepsPerMinDeltas } = m.player.timeline;
+      if (!creepsPerMinDeltas) return;
+      let kda;
+      if (deaths === 0) kda = 0;
+      else kda = (kills + assists) / deaths;
       const cs = Object.keys(creepsPerMinDeltas).reduce((acc, curr) => {
-        acc += (creepsPerMinDeltas[curr] * 10)
-        return acc
-      }, 0 )
-      return { cs, kda, gameCreation, teamKDA }
-    }).filter( m => m !== null)
+        acc += (creepsPerMinDeltas[curr] * 10);
+        return acc;
+      }, 0);
+      return { cs, kda, gameCreation, teamKDA };
+    }).filter((m) => (m !== null));
 
-    gamerOutline[0].stats.trends = _.sortBy(trendData, 'gameCreation')
-    gamerOutline[0].stats.roles = roles
+    gamerOutline[0].stats.trends = _.sortBy(trendData, 'gameCreation');
+    gamerOutline[0].stats.roles = roles;
     gamerOutline[0].stats.frequent_champions = aggregateStats;
     gamerOutline[0].stats.recent = recentMatches;
     gamerOutline[0].stats.ranked = ranked;

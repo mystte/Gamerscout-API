@@ -728,33 +728,32 @@ const getRankedData = async (region, gamerId) => {
   const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
   const { data } = await axios.get(path);
   return data;
-}
+};
 
 
 // Request for a specific lol gamertag (DEPRECATED)
-var getLol = function (gamertag) {
-  var result = { status: 400, data: { message: "getLol" } };
-  return Q().then(function () {
-    json = [];
+const getLol = (gamertag) => {
+  return Q().then(() => {
+    const json = [];
     return lolRequestGetSummonerByGamertag(regions.na, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.br, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.eune, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.kr, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.lan, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.las, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.oce, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.ru, gamertag, json);
-  }).then(function (json) {
+  }).then((json) => {
     return lolRequestGetSummonerByGamertag(regions.tr, gamertag, json);
   });
-}
+};
 
 module.exports = {
   getLol: getLol,
