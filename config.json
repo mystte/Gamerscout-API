@@ -47,7 +47,8 @@
 		{
 			"name": "riot",
 			"enabled": true,
-			"icon-url": "/static/images/platforms/lol.svg"
+      "icon-url": "/static/images/platforms/lol.svg",
+      "staticPath": "/static/lol/6.24.1"
 		},
 		{
 			"name": "steam",

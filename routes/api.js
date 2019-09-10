@@ -161,7 +161,7 @@ router.get('/config', function (req, res, next) {
         regions: logic_lol.regions,
         verbose: logic_lol.regions_verbose
       }
-    }
+    },
   });
 });
 
