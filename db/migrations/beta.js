@@ -58,3 +58,5 @@ db.reviews.update({ "tags.name": "cheater" }, { $set: { "tags.$.type": "bad" } }
 db.reviews.update({ "tags.name": "griefer" }, { $set: { "tags.$.type": "bad" } }, { multi: true });
 db.reviews.update({ "tags.name": "troll" }, { $set: { "tags.$.type": "bad" } }, { multi: true });
 db.reviews.update({ "tags.name": "scammer" }, { $set: { "tags.$.type": "bad" } }, { multi: true });
+
+db.gamers.update({}, { $set: { platform: 'riot' } }, { multi: true })
