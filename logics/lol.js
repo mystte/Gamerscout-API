@@ -244,6 +244,9 @@ var getLolAccountInRegionByGamerTag = function (region, gamertag) {
     const newStats = await lolRequestGetStatsForGamer(region, json[0].id, json[0].accountId);
     json[0].stats = newStats;
     return json;
+  }).catch(function (err) {
+    log.error(err)
+    return json;
   });
 }
 
@@ -503,14 +506,14 @@ const getMatchDataAggregate = (matchData, accountId) => {
   const { teamId } = playerDataForGame;
   const teamData = matchData.teams.find(t => t.teamId === teamId);
   const teamKDARaw = matchData.participants.reduce((acc, curr) => {
-    if(curr.teamId === teamId){
-      const { kills, deaths, assists} = curr.stats
+    if (curr.teamId === teamId) {
+      const { kills, deaths, assists } = curr.stats
       acc.kills += kills
       acc.deaths += deaths
       acc.assists += assists
     }
     return acc
-  },{
+  }, {
       kills: 0,
       deaths: 0,
       assists: 0
@@ -551,10 +554,10 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   let matchData = await LOLMatches.findOne({ gameId: matchId });
   if (!matchData) return null;
   let championData;
-    try {
-      championData = await axios.get('https://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
-    } catch (err) {
-      championData = require('../data/champions.json')
+  try {
+    championData = await axios.get('https://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+  } catch (err) {
+    championData = require('../data/champions.json')
   }
   const championJson = championData.data.data;
   const championList = Object.entries(championJson).map(d => d[1]);
@@ -606,15 +609,15 @@ const getRecentMatchData = async (accountId, matchId, region) => {
 
 const getRecentMatchList = async (region, accountId) => {
   const matches = await getMatchListForPlayer(region, accountId);
-  if(!matches) return []
+  if(!matches) return [];
   const matchIds = matches.map(({ gameId }) => gameId);
   const matchHistory = await Promise.all(matchIds.map(async matchId => {
     return await getRecentMatchData(accountId, matchId, region);
   }))
   const filteredMatchHistory = matchHistory.filter(mh => mh !== null);
   const sorted = _.sortBy(filteredMatchHistory, 'gameCreation');
-  if (sorted.length <= 5) return sorted.reverse();
-  else return sorted.slice(sorted.length - 5, sorted.length).reverse();
+  if (sorted.length <= 25) return sorted.reverse();
+  else return sorted.slice(sorted.length - 25, sorted.length).reverse();
 }
 
 const getMatchListForPlayer = async (region, accountId) => {
