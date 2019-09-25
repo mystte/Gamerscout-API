@@ -55,24 +55,24 @@ router.post('/tags', function (req, res, next) {
 });
 
 // Retrieve available tags
-router.get('/attributes', function(req, res, next) {
-    // if (!req.session._id) {
-    //     res.status(403).json({err : "Forbidden"});
-    //     return;
-    // }
-    Q().then(function() {
-        return Tag.find();
-    }).then(function(tags, err) {
-        if (err) {
-          console.log(err);
-          return res.status(500).json("Internal Server Error");
-        } else {
-          return res.status(200).json({ attributes : tags});
-        }
-    }).catch(function(reason) {
-        console.log(reason);
-        return res.status(500).json("Internal Server Error");
-    });
+router.get('/attributes', function (req, res, next) {
+  // if (!req.session._id) {
+  //     res.status(403).json({err : "Forbidden"});
+  //     return;
+  // }
+  Q().then(function () {
+    return Tag.find();
+  }).then(function (tags, err) {
+    if (err) {
+      console.log(err);
+      return res.status(500).json("Internal Server Error");
+    } else {
+      return res.status(200).json({ attributes: tags });
+    }
+  }).catch(function (reason) {
+    console.log(reason);
+    return res.status(500).json("Internal Server Error");
+  });
 });
 
 const hasUserAlreadyReviewed = (loggedInuserId = null, gamerId) => {
@@ -217,7 +217,7 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
   const query_page = req.query.page ? +req.query.page : 1;
 
   try {
-    const platformDetails = config.supported_platforms.find( p => p.name === platform)
+    const platformDetails = config.supported_platforms.find(p => p.name === platform)
     if (!platformDetails || !platformDetails.enabled) throw new Error('Not supported Platform')
     const gamerOptions = {
       gamertag: new RegExp('^' + gerUsernameRegexpForSearch(gamertag) + '$', "i"),
@@ -254,23 +254,58 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
     const ranked = await logic_lol.getRankedData(regionId, gamerOutline[0].gamer_id);
     const rawRoles = allMatchData
       .map((m) => {
-        if (!m) return null;
-        return m.player.timeline.lane;
+        if (!m || !m.player || !m.player.stats) return null;
+        const { kills, assists, deaths, win } = m.player.stats
+        return {
+          lane: m.player.timeline.lane,
+          kills,
+          assists,
+          deaths,
+          win
+        };
       })
       .reduce((acc, curr) => {
         if (!curr) return acc;
-        if (acc[curr.toLowerCase()] === undefined) {
-          acc[curr.toLowerCase()] = 1;
+        const lane = curr.lane.toLowerCase()
+        if (acc[lane] === undefined) {
+          acc[lane] = {
+            count: 1,
+            kills: curr.kills,
+            win: Number(curr.win),
+            deaths: curr.deaths,
+            assists: curr.assists,
+            loss: Number(!curr.win)
+          }
         } else {
-          acc[curr.toLowerCase()] += 1;
+          acc[lane].count += 1;
+          acc[lane].kills += curr.kills;
+          acc[lane].win += Number(curr.win);
+          acc[lane].deaths += curr.deaths;
+          acc[lane].assists += curr.assists;
+          acc[lane].loss += Number(!curr.win);
         }
         return acc;
       }, {});
-    const roles = Object.keys(rawRoles).reduce((acc, curr) => {
-      const count = rawRoles[curr];
-      acc[curr] = { count, percentage: (count / allMatchData.length) };
-      return acc;
-    }, {});
+    let roles;
+    if (rawRoles) {
+      roles = Object.keys(rawRoles).reduce((acc, curr) => {
+        const { count, win, loss, kills, deaths, assists} = rawRoles[curr]
+        acc[curr] = {
+          count,
+          percentage: (count / allMatchData.length),
+          kills,
+          win,
+          loss,
+          deaths,
+          assists,
+          winPercentage: (win / (win + loss)),
+          kda: (kills + assists / deaths)
+        };
+        return acc;
+      }, {});
+    } else {
+      roles = { count: 0, percentage: 0, kda: 0, wins: 0, loss: 0, kills: 0, deaths: 0, assists: 0, winPercentage: 0 }
+    }
     const trendData = allMatchData.map((m) => {
       if (!m) return;
       const { kills, deaths, assists } = m.player.stats;
@@ -385,37 +420,37 @@ router.post('/account/validate', function (req, res, next) {
 });
 
 // Post a review for a specific gamer
-router.post('/gamer/review', function(req, res, next) {
-    if (!req.session._id) {
-        res.status(403).json({err : "Forbidden"});
-        return;
-    }
-    var gamer_id = req.body.id ? req.body.id : null;
-    var comment = req.body.comment ? req.body.comment : null;
-    var attributes = req.body.attributes ? req.body.attributes : [];
-    var review_type = req.body.review_type ? req.body.review_type : null;
+router.post('/gamer/review', function (req, res, next) {
+  if (!req.session._id) {
+    res.status(403).json({ err: "Forbidden" });
+    return;
+  }
+  var gamer_id = req.body.id ? req.body.id : null;
+  var comment = req.body.comment ? req.body.comment : null;
+  var attributes = req.body.attributes ? req.body.attributes : [];
+  var review_type = req.body.review_type ? req.body.review_type : null;
 
-    Q().then(function() {
-        return Gamer.findOne({_id:gamer_id});
-    }).then(function(gamer, err) {
-        if (err) {
-            res.status(400).json({error : err});
-        } else if (!gamer) {
-            res.status(404).json({error : "Gamer Not Found"});
-        } else {
-            return Q().then(function() {
-                return logic_lol.postReview(gamer, comment, attributes, review_type, req.session._id);
-            }).then(function(result) {
-                if (environment === 'production') slack.slackNotificationForReview('`' + req.session._id + '` just reviewed `' + gamer.gamertag + '` and said: `' + comment + '`');
-                res.status(result.status).json(result.data);
-            }).catch((reason) => {
-                console.log("reason", reason);
-                res.status(500).json('Internal Server Error');
-            });
-        }
-    }).catch((reason) => {
+  Q().then(function () {
+    return Gamer.findOne({ _id: gamer_id });
+  }).then(function (gamer, err) {
+    if (err) {
+      res.status(400).json({ error: err });
+    } else if (!gamer) {
+      res.status(404).json({ error: "Gamer Not Found" });
+    } else {
+      return Q().then(function () {
+        return logic_lol.postReview(gamer, comment, attributes, review_type, req.session._id);
+      }).then(function (result) {
+        if (environment === 'production') slack.slackNotificationForReview('`' + req.session._id + '` just reviewed `' + gamer.gamertag + '` and said: `' + comment + '`');
+        res.status(result.status).json(result.data);
+      }).catch((reason) => {
+        console.log("reason", reason);
         res.status(500).json('Internal Server Error');
       });
+    }
+  }).catch((reason) => {
+    res.status(500).json('Internal Server Error');
+  });
 });
 
 // Get random players

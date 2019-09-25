@@ -561,7 +561,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   }
   const championJson = championData.data.data;
   const championList = Object.entries(championJson).map(d => d[1]);
-  const { participants, participantIdentities, gameCreation } = matchData;
+  const { participants, participantIdentities, gameCreation, gameDuration, gameType, gameMode } = matchData;
   const { participantId } = participantIdentities.find(({ player }) =>
     player.accountId === accountId
   );
@@ -603,7 +603,10 @@ const getRecentMatchData = async (accountId, matchId, region) => {
     totalDamageDealToChampions,
     teammates,
     opponents,
-    gameCreation
+    gameCreation,
+    gameType,
+    gameDuration,
+    gameMode
   }
 }
 
