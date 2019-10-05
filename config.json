@@ -1,6 +1,6 @@
 {
 	"version": "0.9.1",
-	"api_base_url" : "",
+	"api_base_url" : "127.0.0.1",
 	"api_base_port" : 8002,
 	"lol_api" : {
 		"api_key_dev": "RGAPI-10698cc7-9ea4-457a-b393-8ffe540bc02c",

@@ -11,6 +11,7 @@ const constants = require('../utils/constants');
 const LOLMatches = require('../models/lolMatches');
 const _ = require('lodash')
 const log = require('color-logs')(isLogEnabled = true, isDebugEnabled = true, __filename);
+const config = require('../config');
 
 const regions = {
   na: "na1",
@@ -554,8 +555,14 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   let matchData = await LOLMatches.findOne({ gameId: matchId });
   if (!matchData) return null;
   let championData;
+
   try {
-    championData = await axios.get('https://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
+    championData = await axios.get('/lol/9.8.1/data/en_US/champion.json', {
+      proxy: {
+        host: config.api_base_url,
+        port: config.api_base_port,
+      },
+    });
   } catch (err) {
     championData = require('../data/champions.json')
   }
@@ -585,6 +592,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const items = [item0, item1, item2, item3, item4, item5, item6];
   const teammates = playerTeamData.filter(p => p.teamId === teamId);
   const opponents = playerTeamData.filter(p => p.teamId !== teamId);
+  console.log("  return   getRecentMatchData");
   return {
     championId,
     champion: (champion || {}).name,
@@ -612,9 +620,9 @@ const getRecentMatchData = async (accountId, matchId, region) => {
 
 const getRecentMatchList = async (region, accountId) => {
   const matches = await getMatchListForPlayer(region, accountId);
-  if(!matches) return [];
+  if (!matches) return [];
   const matchIds = matches.map(({ gameId }) => gameId);
-  const matchHistory = await Promise.all(matchIds.map(async matchId => {
+  const matchHistory = await Promise.all(matchIds.map(async (matchId, idx) => {
     return await getRecentMatchData(accountId, matchId, region);
   }))
   const filteredMatchHistory = matchHistory.filter(mh => mh !== null);
