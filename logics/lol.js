@@ -11,7 +11,6 @@ const constants = require('../utils/constants');
 const LOLMatches = require('../models/lolMatches');
 const _ = require('lodash')
 const log = require('color-logs')(isLogEnabled = true, isDebugEnabled = true, __filename);
-const config = require('../config');
 
 const regions = {
   na: "na1",
