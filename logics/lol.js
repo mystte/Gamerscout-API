@@ -531,7 +531,7 @@ const getMatchDataAggregate = (matchData, accountId) => {
     })
   const teamKDA = (teamKDARaw.kills + teamKDARaw.assists) / teamKDARaw.deaths
   const { gameId, gameCreation, gameDuration, seasonId, gameMode, gameType, queueId } = matchData;
-  let queueType = queueMap[queueId].description
+  let queueType = (queueMap[queueId].description.split(' ')).map(c => c.toUpperCase()).join('_')
   const win = teamData.win === 'Win' ? true : false;
   return {
     gameId,
@@ -571,7 +571,8 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const { participantId } = participantIdentities.find(({ player }) =>
     player.accountId === accountId
   );
-  let queueType = queueMap[queueId].description
+  let queueType = (queueMap[queueId].description.split(' ')).map(c => c.toUpperCase()).join('_')
+
   const playerTeamData = participantIdentities.map(({ participantId, player }) => {
     const { championId, teamId } = participants.find(p => p.participantId === participantId);
     const championData = championList.find(c => c.key == championId);
