@@ -11,7 +11,7 @@ const constants = require('../utils/constants');
 const LOLMatches = require('../models/lolMatches');
 const _ = require('lodash')
 const log = require('color-logs')(isLogEnabled = true, isDebugEnabled = true, __filename);
-
+const runes = require('../data/runes.json')
 const championData = require('../data/champions.json')
 const championJson = championData.data;
 const championList = Object.entries(championJson).map(d => d[1]);
@@ -586,10 +586,13 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   })
   const playerDataForGame = participants.find(p => p.participantId === participantId);
   const { teamId, championId, stats, timeline, spell1Id, spell2Id } = playerDataForGame;
-  const { kills, deaths, assists, item0, item1, item2, item3, item4, item5, item6, win, champLevel, totalMinionsKilled, totalDamageDealToChampions } = stats;
+  const { kills, deaths, assists, perk0, perk1, perk2, perk3, perk4, perk5, item0, item1, item2, item3, item4, item5, item6, win, champLevel, totalMinionsKilled, totalDamageDealToChampions } = stats;
   const { lane } = timeline;
   const champion = championList.find(c => c.key == championId);
   const kda = (kills + assists) / deaths;
+  const perks = [perk0, perk1, perk2, perk3, perk4, perk5].map(key => {
+    return runes.find( ({id}) => id == key )
+  })
   const items = [item0, item1, item2, item3, item4, item5, item6];
   const teammates = playerTeamData.filter(p => p.teamId === teamId);
   const opponents = playerTeamData.filter(p => p.teamId !== teamId);
@@ -601,6 +604,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
     assists,
     kda,
     items,
+    perks,
     spell1Id,
     spell2Id,
     teamId,
@@ -670,7 +674,7 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
       try {
         if (!curr) return acc;
         let { championId, player } = curr;
-        const { win, kills, deaths, assists, totalDamageDealt } = player.stats;
+        const { win, kills, deaths, assists, totalDamageDealt} = player.stats;
         const cs = Object.keys(curr.player.timeline.creepsPerMinDeltas).reduce((a, c) => {
           return a + (10 * curr.player.timeline.creepsPerMinDeltas[c]);
         }, 0)
@@ -735,6 +739,7 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
 
 const getRankedData = async (region, gamerId) => {
   const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
+  console.log(path)
   const { data } = await axios.get(path);
   return data;
 };
