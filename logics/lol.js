@@ -18,8 +18,8 @@ const championList = Object.entries(championJson).map(d => d[1]);
 
 const queueTypes = require('../data/queueTypes.json')
 const queueMap = queueTypes.reduce((acc, curr) => {
-  const {queueId, map, description } = curr
-  acc[queueId] = { queueId, map, description}
+  const {queueId, map, description, id } = curr
+  acc[queueId] = { queueId, map, description, id}
   return acc
 }, {})
 
@@ -531,7 +531,7 @@ const getMatchDataAggregate = (matchData, accountId) => {
     })
   const teamKDA = (teamKDARaw.kills + teamKDARaw.assists) / teamKDARaw.deaths
   const { gameId, gameCreation, gameDuration, seasonId, gameMode, gameType, queueId } = matchData;
-  let queueType = (queueMap[queueId].description.split(' ')).map(c => c.toUpperCase()).join('_')
+  let queueType = (queueMap[queueId] || {}).id ? (queueMap[queueId] || {}).id : 'OTHER'
   const win = teamData.win === 'Win' ? true : false;
   return {
     gameId,
@@ -571,8 +571,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const { participantId } = participantIdentities.find(({ player }) =>
     player.accountId === accountId
   );
-  let queueType = (queueMap[queueId].description.split(' ')).map(c => c.toUpperCase()).join('_')
-
+  let queueType = (queueMap[queueId] || {}).id ? (queueMap[queueId] || {}).id : 'OTHER'
   const playerTeamData = participantIdentities.map(({ participantId, player }) => {
     const { championId, teamId } = participants.find(p => p.participantId === participantId);
     const championData = championList.find(c => c.key == championId);
