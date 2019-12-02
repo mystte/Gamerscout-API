@@ -18,8 +18,13 @@ const championList = Object.entries(championJson).map(d => d[1]);
 
 const queueTypes = require('../data/queueTypes.json')
 const queueMap = queueTypes.reduce((acc, curr) => {
+<<<<<<< HEAD
   const {queueId, map, description, id } = curr
   acc[queueId] = { queueId, map, description, id}
+=======
+  const { queueId, map, description, id } = curr
+  acc[queueId] = { queueId, map, description, id }
+>>>>>>> 73081df6658667c7ee6695b7c9d2d82766e628e2
   return acc
 }, {})
 
@@ -590,7 +595,11 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const champion = championList.find(c => c.key == championId);
   const kda = (kills + assists) / deaths;
   const perks = [perk0, perk1, perk2, perk3, perk4, perk5].map(key => {
+<<<<<<< HEAD
     return runes.find( ({id}) => id == key )
+=======
+    return runes.find(({ id }) => id == key)
+>>>>>>> 73081df6658667c7ee6695b7c9d2d82766e628e2
   })
   const items = [item0, item1, item2, item3, item4, item5, item6];
   const teammates = playerTeamData.filter(p => p.teamId === teamId);
@@ -636,13 +645,24 @@ const getRecentMatchList = async (region, accountId) => {
   else return sorted.slice(sorted.length - 25, sorted.length).reverse();
 }
 
+const getLiveMatchForPlayer = async (region, accountId) => {
+  try {
+    const liveUrl = `https://${region}.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/${accountId}?api_key=${constants.LOL_API_KEY}`
+    const { data } = await axios.get(liveUrl);
+    return data;
+  } catch (err) {
+    log.error(`No live match found for this user: ${err}`)
+    return {}
+  }
+}
+
 const getMatchListForPlayer = async (region, accountId) => {
   try {
     const matchListURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matchlists/by-account/${accountId}?api_key=${constants.LOL_API_KEY}`;
     const { data } = await axios.get(matchListURL);
     const { matches } = data;
     return matches;
-  } catch(err) {
+  } catch (err) {
     log.error(`No matches found for this user`)
     return null
   }
@@ -784,5 +804,6 @@ module.exports = {
   createLolGamersInDB: createLolGamersInDB,
   getMatchAggregateStatsByChampion,
   computeAttributes,
-  getRecentMatchList
+  getRecentMatchList,
+  getLiveMatchForPlayer
 }
