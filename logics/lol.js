@@ -11,6 +11,17 @@ const constants = require('../utils/constants');
 const LOLMatches = require('../models/lolMatches');
 const _ = require('lodash')
 const log = require('color-logs')(isLogEnabled = true, isDebugEnabled = true, __filename);
+const runes = require('../data/runes.json')
+const championData = require('../data/champions.json')
+const championJson = championData.data;
+const championList = Object.entries(championJson).map(d => d[1]);
+
+const queueTypes = require('../data/queueTypes.json')
+const queueMap = queueTypes.reduce((acc, curr) => {
+  const { queueId, map, description, id } = curr
+  acc[queueId] = { queueId, map, description, id }
+  return acc
+}, {})
 
 const regions = {
   na: "na1",
@@ -588,6 +599,9 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const { lane } = timeline;
   const champion = championList.find(c => c.key == championId);
   const kda = (kills + assists) / deaths;
+  const perks = [perk0, perk1, perk2, perk3, perk4, perk5].map(key => {
+    return runes.find(({ id }) => id == key)
+  })
   const items = [item0, item1, item2, item3, item4, item5, item6];
   const teammates = playerTeamData.filter(p => p.teamId === teamId);
   const opponents = playerTeamData.filter(p => p.teamId !== teamId);
@@ -630,13 +644,24 @@ const getRecentMatchList = async (region, accountId) => {
   else return sorted.slice(sorted.length - 25, sorted.length).reverse();
 }
 
+const getLiveMatchForPlayer = async (region, accountId) => {
+  try {
+    const liveUrl = `https://${region}.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/${accountId}?api_key=${constants.LOL_API_KEY}`
+    const { data } = await axios.get(liveUrl);
+    return data;
+  } catch (err) {
+    log.error(`No live match found for this user: ${err}`)
+    return {}
+  }
+}
+
 const getMatchListForPlayer = async (region, accountId) => {
   try {
     const matchListURL = `https://${region}.api.riotgames.com/lol/match/${config.lol_api.version}/matchlists/by-account/${accountId}?api_key=${constants.LOL_API_KEY}`;
     const { data } = await axios.get(matchListURL);
     const { matches } = data;
     return matches;
-  } catch(err) {
+  } catch (err) {
     log.error(`No matches found for this user`)
     return null
   }
@@ -784,5 +809,6 @@ module.exports = {
   createLolGamersInDB: createLolGamersInDB,
   getMatchAggregateStatsByChampion,
   computeAttributes,
-  getRecentMatchList
+  getRecentMatchList,
+  getLiveMatchForPlayer
 }

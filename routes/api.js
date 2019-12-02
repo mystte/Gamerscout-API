@@ -252,6 +252,18 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
     const { aggregateStats, allMatchData } = await logic_lol.getMatchAggregateStatsByChampion(regionId, gamerOutline[0].account_id);
     const recentMatches = await logic_lol.getRecentMatchList(regionId, gamerOutline[0].account_id);
     const ranked = await logic_lol.getRankedData(regionId, gamerOutline[0].gamer_id);
+    const liveData = await logic_lol.getLiveMatchForPlayer(regionId, gamerOutline[0].gamer_id)
+    const blue = ((liveData || {}).participants || []).filter(({ teamId }) => teamId === 100)
+    const red = ((liveData || {}).participants || []).filter(({ teamId }) => teamId === 200)
+    const { gameMode, gameType, gameStartTime, gameLength } = (liveData || {})
+    const live = {
+      gameMode,
+      gameType,
+      gameStartTime,
+      gameLength,
+      blue,
+      red
+    }
     const rawRoles = allMatchData
       .map((m) => {
         if (!m || !m.player || !m.player.stats) return null;
@@ -289,7 +301,7 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
     let roles;
     if (rawRoles) {
       roles = Object.keys(rawRoles).reduce((acc, curr) => {
-        const { count, win, loss, kills, deaths, assists} = rawRoles[curr]
+        const { count, win, loss, kills, deaths, assists } = rawRoles[curr]
         acc[curr] = {
           count,
           percentage: (count / allMatchData.length),
@@ -327,6 +339,7 @@ router.get('/search/:platform/:region/:game/:gamertag', async (req, res, next) =
     gamerOutline[0].stats.frequent_champions = aggregateStats;
     gamerOutline[0].stats.recent = recentMatches;
     gamerOutline[0].stats.ranked = ranked;
+    gamerOutline[0].stats.live = live;
     res.status(201).json(gamerOutline);
   } catch (err) {
     log.error(`Error here: ${err}`);
