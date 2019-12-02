@@ -18,13 +18,8 @@ const championList = Object.entries(championJson).map(d => d[1]);
 
 const queueTypes = require('../data/queueTypes.json')
 const queueMap = queueTypes.reduce((acc, curr) => {
-<<<<<<< HEAD
-  const {queueId, map, description, id } = curr
-  acc[queueId] = { queueId, map, description, id}
-=======
   const { queueId, map, description, id } = curr
   acc[queueId] = { queueId, map, description, id }
->>>>>>> 73081df6658667c7ee6695b7c9d2d82766e628e2
   return acc
 }, {})
 
@@ -595,11 +590,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const champion = championList.find(c => c.key == championId);
   const kda = (kills + assists) / deaths;
   const perks = [perk0, perk1, perk2, perk3, perk4, perk5].map(key => {
-<<<<<<< HEAD
-    return runes.find( ({id}) => id == key )
-=======
     return runes.find(({ id }) => id == key)
->>>>>>> 73081df6658667c7ee6695b7c9d2d82766e628e2
   })
   const items = [item0, item1, item2, item3, item4, item5, item6];
   const teammates = playerTeamData.filter(p => p.teamId === teamId);
