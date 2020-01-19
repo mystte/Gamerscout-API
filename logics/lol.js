@@ -578,7 +578,8 @@ const getRecentMatchData = async (accountId, matchId, region) => {
     return {
       participantId,
       summonerId: player.summonerName,
-      champion: (championData || {}).name,
+      championDisplayName: (championData || {}).name,
+      champion: (championData || {}).id,
       championId,
       teamId
     }
@@ -597,7 +598,8 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const opponents = playerTeamData.filter(p => p.teamId !== teamId);
   return {
     championId,
-    champion: (champion || {}).name,
+    championDisplayName: (champion || {}).name,
+    champion: (champion || {}).id,
     kills,
     deaths,
     assists,
@@ -749,7 +751,6 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
 
 const getRankedData = async (region, gamerId) => {
   const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
-  console.log(path)
   const { data } = await axios.get(path);
   return data;
 };
