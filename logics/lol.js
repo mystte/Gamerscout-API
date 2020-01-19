@@ -530,7 +530,8 @@ const getMatchDataAggregate = (matchData, accountId) => {
       assists: 0
     })
   const teamKDA = (teamKDARaw.kills + teamKDARaw.assists) / teamKDARaw.deaths
-  const { gameId, gameCreation, gameDuration, seasonId, gameMode, gameType } = matchData;
+  const { gameId, gameCreation, gameDuration, seasonId, gameMode, gameType, queueId } = matchData;
+  let queueType = (queueMap[queueId] || {}).id ? (queueMap[queueId] || {}).id : 'OTHER'
   const win = teamData.win === 'Win' ? true : false;
   return {
     gameId,
@@ -543,7 +544,9 @@ const getMatchDataAggregate = (matchData, accountId) => {
     win,
     player: playerDataForGame,
     team: teamData,
-    teamKDA
+    teamKDA,
+    queueType,
+    queueId
   }
 }
 
@@ -564,38 +567,26 @@ const getNewMatchDataForPlayer = async (matchId, region, accountId) => {
 const getRecentMatchData = async (accountId, matchId, region) => {
   let matchData = await LOLMatches.findOne({ gameId: matchId });
   if (!matchData) return null;
-  let championData;
-
-  try {
-    championData = await axios.get('/lol/9.8.1/data/en_US/champion.json', {
-      proxy: {
-        host: config.api_base_url,
-        port: config.api_base_port,
-      },
-    });
-  } catch (err) {
-    championData = require('../data/champions.json')
-  }
-  const championJson = championData.data.data;
-  const championList = Object.entries(championJson).map(d => d[1]);
-  const { participants, participantIdentities, gameCreation, gameDuration, gameType, gameMode } = matchData;
+  const { participants, participantIdentities, gameCreation, gameDuration, gameType, gameMode, queueId } = matchData;
   const { participantId } = participantIdentities.find(({ player }) =>
     player.accountId === accountId
   );
+  let queueType = (queueMap[queueId] || {}).id ? (queueMap[queueId] || {}).id : 'OTHER'
   const playerTeamData = participantIdentities.map(({ participantId, player }) => {
     const { championId, teamId } = participants.find(p => p.participantId === participantId);
     const championData = championList.find(c => c.key == championId);
     return {
       participantId,
       summonerId: player.summonerName,
-      champion: (championData || {}).name,
+      championDisplayName: (championData || {}).name,
+      champion: (championData || {}).id,
       championId,
       teamId
     }
   })
   const playerDataForGame = participants.find(p => p.participantId === participantId);
   const { teamId, championId, stats, timeline, spell1Id, spell2Id } = playerDataForGame;
-  const { kills, deaths, assists, item0, item1, item2, item3, item4, item5, item6, win, champLevel, totalMinionsKilled, totalDamageDealToChampions } = stats;
+  const { kills, deaths, assists, perk0, perk1, perk2, perk3, perk4, perk5, item0, item1, item2, item3, item4, item5, item6, win, champLevel, totalMinionsKilled, totalDamageDealToChampions } = stats;
   const { lane } = timeline;
   const champion = championList.find(c => c.key == championId);
   const kda = (kills + assists) / deaths;
@@ -605,15 +596,16 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const items = [item0, item1, item2, item3, item4, item5, item6];
   const teammates = playerTeamData.filter(p => p.teamId === teamId);
   const opponents = playerTeamData.filter(p => p.teamId !== teamId);
-  console.log("  return   getRecentMatchData");
   return {
     championId,
-    champion: (champion || {}).name,
+    championDisplayName: (champion || {}).name,
+    champion: (champion || {}).id,
     kills,
     deaths,
     assists,
     kda,
     items,
+    perks,
     spell1Id,
     spell2Id,
     teamId,
@@ -626,6 +618,8 @@ const getRecentMatchData = async (accountId, matchId, region) => {
     opponents,
     gameCreation,
     gameType,
+    queueType,
+    queueId,
     gameDuration,
     gameMode
   }
@@ -687,19 +681,12 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
       return await getNewMatchDataForPlayer(matchId, region, accountId);
     }))
     const allMatchData = knownMatchData.concat(newMatchData);
-    let championData;
-    try {
-      championData = await axios.get('https://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json');
-    } catch (err) {
-      championData = require('../data/champions.json')
-    }
-    const championJson = championData.data.data;
     const championList = Object.entries(championJson).map(d => d[1]);
     const grouped = allMatchData.reduce((acc, curr) => {
       try {
         if (!curr) return acc;
         let { championId, player } = curr;
-        const { win, kills, deaths, assists, totalDamageDealt } = player.stats;
+        const { win, kills, deaths, assists, totalDamageDealt} = player.stats;
         const cs = Object.keys(curr.player.timeline.creepsPerMinDeltas).reduce((a, c) => {
           return a + (10 * curr.player.timeline.creepsPerMinDeltas[c]);
         }, 0)

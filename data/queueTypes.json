@@ -1,0 +1,58 @@
+[
+  {
+    "queueId": 420,
+    "map": "Summoner's Rift",
+    "description": "5v5 Ranked Solo games",
+    "id": "5V5_RANKED_SOLO_GAMES",
+    "notes": null
+  },
+  {
+    "queueId": 430,
+    "map": "Summoner's Rift",
+    "description": "5v5 Blind Pick games",
+    "id": "5V5_BLIND_PICK_GAMES",
+    "notes": null
+  },
+  {
+    "queueId": 440,
+    "map": "Summoner's Rift",
+    "description": "5v5 Ranked Flex games",
+    "id": "5V5_RANKED_FLEX_GAMES",
+    "notes": null
+  },
+  {
+    "queueId": 450,
+    "map": "Howling Abyss",
+    "description": "5v5 ARAM games",
+    "id": "5V5_ARAM_GAMES",
+    "notes": null
+  },
+  {
+    "queueId": 460,
+    "map": "Twisted Treeline",
+    "description": "3v3 Blind Pick games",
+    "id": "3V3_BLIND_PICK_GAMES",
+    "notes": null
+  },
+  {
+    "queueId": 470,
+    "map": "Twisted Treeline",
+    "description": "3v3 Ranked Flex games",
+    "id": "3V3_RANKED_FLEX_GAMES",
+    "notes": null
+  },
+  {
+    "queueId": 1090,
+    "map": "Convergence",
+    "description": "Teamfight Tactics games",
+    "id": "TEAMFIGHT_TACTICS_GAMES",
+    "notes": null
+  },
+  {
+    "queueId": 1100,
+    "map": "Convergence",
+    "description": "Ranked Teamfight Tactics games",
+    "id": "RANKED_TEAMFIGHT_TACTICS_GAMES",
+    "notes": null
+  }
+]
