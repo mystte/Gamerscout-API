@@ -167,11 +167,7 @@ var lolRequestGetSummonerByGamerId = function(region, gamerId, json) {
 };
 
 var getLolProfileIcon = function(iconId) {
-  return iconId
-    ? "https://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" +
-        iconId +
-        ".png"
-    : "/static/images/default_profile_picture.jpg";
+  return iconId ? `/img/profileicon/${iconId}.png` : "/img/profileicon/0.png";
 };
 
 // Create entries with json form
