@@ -15,8 +15,11 @@ const log = require("color-logs")(
   (isDebugEnabled = true),
   __filename
 );
+
+const riotConstants = config.supported_platforms.find( i => i.name === 'riot');
+const riotVersion = riotConstants.staticPath;
 const runes = require("../data/runes.json");
-const championData = require("../data/champions.json");
+const championData = require(`../public/${riotVersion}/data/en_US/champion.json`);
 const championJson = championData.data;
 const championList = Object.entries(championJson).map(d => d[1]);
 
@@ -448,8 +451,7 @@ var getPlayedPositionsFromData = function(data) {
 };
 
 var getPlayedChampionsFromData = async function(data) {
-  var urlChampions =
-    "https://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json";
+  var urlChampions = championData;
   var championsRes = JSON.parse(await request(urlChampions));
   const champions = {};
 
@@ -912,7 +914,7 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
         else lost = 1;
         const champion = championList.find(c => c.key == championId);
         if (!champion) return acc;
-        const { name } = champion;
+        const { name, id } = champion;
         const gameStats = { kills, deaths, assists, kda };
         if (acc[name]) {
           // Track wins/losses w this champion to calculate winrate
@@ -934,7 +936,8 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
           if (won) winrate = 1.0;
           else winrate = 0.0;
           acc[name] = {
-            champion: name,
+            champion: id,
+            championDisplayName: name,
             bestGame: gameStats,
             worstGame: gameStats,
             winrate,
