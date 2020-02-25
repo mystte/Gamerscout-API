@@ -655,7 +655,7 @@ var getLeague = async function(region, league_id, page) {
 const getMatchDataAggregate = (matchData, accountId) => {
   if (!matchData || !accountId) return;
   const { participantId } = matchData.participantIdentities.find(
-    ({ player }) => player.accountId === accountId
+    ({ player }) => player.accountId === accountId || player.currentAccountId === accountId
   );
   const playerDataForGame = matchData.participants.find(
     p => p.participantId === participantId
@@ -736,7 +736,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
     queueId
   } = matchData;
   const { participantId } = participantIdentities.find(
-    ({ player }) => player.accountId === accountId
+    ({ player }) => player.accountId === accountId || player.currentAccountId === accountId
   );
   let queueType = (queueMap[queueId] || {}).id
     ? (queueMap[queueId] || {}).id
