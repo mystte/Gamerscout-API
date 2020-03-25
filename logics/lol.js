@@ -723,6 +723,18 @@ const getNewMatchDataForPlayer = async (matchId, region, accountId) => {
   }
 };
 
+const getKeystoneFromPerkPath = (pathId, keystoneId) => {
+  try {
+    const runesInPath = runes.find(({id}) => id === pathId)
+    const allKeyStonesGrouped = runesInPath.slots.map(({runes}) => runes);
+    const flattenedKeyStones = _.flatten(allKeyStonesGrouped);
+    return flattenedKeyStones.find(({id}) => id === keystoneId);
+  } catch (err) {
+    log.error(`Could not get keystone ${err}`);
+    return null;
+  }
+}
+
 const getRecentMatchData = async (accountId, matchId, region) => {
   let matchData = await LOLMatches.findOne({ gameId: matchId });
   if (!matchData) return null;
@@ -773,6 +785,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
     kills,
     deaths,
     assists,
+    perk0,
     perkPrimaryStyle,
     perkSubStyle,
     item0,
@@ -791,7 +804,8 @@ const getRecentMatchData = async (accountId, matchId, region) => {
   const { lane } = timeline;
   const champion = championList.find(c => c.key == championId);
   const kda = (kills + assists) / deaths;
-  const primaryPerk = runes.find(({ id }) => id === perkPrimaryStyle);
+  // Primary perk is the keystone, subperk is the perk path chosen
+  const primaryPerk = getKeystoneFromPerkPath(perkPrimaryStyle, perk0);
   const subPerk = runes.find(({ id }) => id === perkSubStyle);
   const items = [item0, item1, item2, item3, item4, item5, item6];
   const teammates = playerTeamData.filter(p => p.teamId === teamId);
