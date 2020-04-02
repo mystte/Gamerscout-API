@@ -417,6 +417,7 @@ router.post("/signup", function(req, res, next) {
         return User.findOne({ email: email });
       })
       .then(function(user, err) {
+        console.log("found user = ", user);
         if (err) {
           console.log(__filename, err);
           return res.status(500).json({ error: "errInternal" });
