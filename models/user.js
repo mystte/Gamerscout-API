@@ -51,7 +51,7 @@ var userSchema = new Schema(
     },
     facebookEmail: {
       type: String,
-      validate: [validateEmail, "Please provide a valid email address"]
+      default: null
     },
     emailToValidate: { type: String },
     validateAccountToken: String,
