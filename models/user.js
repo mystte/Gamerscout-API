@@ -47,12 +47,14 @@ var userSchema = new Schema(
     email: {
       type: String,
       validate: [validateEmail, "Please provide a valid email address"],
-      index: { unique: true }
+      unique: true,
+      sparse: true
     },
     facebookEmail: {
       type: String,
       validate: [validateEmail, "Please provide a valid email address"],
-      index: { unique: true }
+      unique: true,
+      sparse: true
     },
     emailToValidate: { type: String },
     validateAccountToken: String,
