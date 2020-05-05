@@ -194,6 +194,7 @@ var createLolGamersInDB = function(json) {
         last_update: Date.now(),
         profile_picture: getLolProfileIcon(json[i].profileIconId)
       });
+      console.log(json[i].id);
       result.push(newGamer.save(json[i].item));
     })(i); // avoid the closure loop problem
   return Q.all(result);

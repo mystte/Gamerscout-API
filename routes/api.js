@@ -595,7 +595,7 @@ router.post("/gamer/review", function(req, res, next) {
           })
           .catch(reason => {
             console.log("reason", reason);
-            res.status(500).json("Internal Server Error");
+            res.status(500).json(`Internal Server Error `);
           });
       }
     })
@@ -604,6 +604,46 @@ router.post("/gamer/review", function(req, res, next) {
       res.status(500).json("Internal Server Error");
     });
 });
+
+
+/**
+ * Report a review
+ */
+router.post("/gamer/review/report", async (req, res, next) => {
+  try {
+    const { _id, email } = req.session;
+    if (!_id) {
+      res.status(403).json({ err: "Must be logged in to report a Review" });
+      return;
+    }
+    const reporter = await User.findOne({ _id });
+    if(!reporter) {
+      res.status(500).json({ error: "Not a valid user"})
+    }
+    const { reason, reviewId } = req.body;
+    const review = await Review.findOne({ _id: reviewId});
+    const existingReports = review.reports || [];
+    const userHasAlreadyReviewed = existingReports.some( ({reviewerId}) => reviewerId === _id);
+    if(!userHasAlreadyReviewed){
+      review.reports.push({ reviewerId: _id, reason, date: Date.now()});
+      review.save();
+      slack.slackNotificationForReport(
+        `${reporter.username}(${_id}) just reported a review on ${
+          review.gamer_id
+        }'s profile:\n\`\`\`Review: ${review.comment}\nReason: ${reason}\`\`\``
+      );
+      res.json('success')
+    } else {
+      res.status(422).json({ error: "User has already reported this comment"});
+    }
+
+  } catch (err){
+    console.log("Error reporting a review", err);
+    res.status(500).json("Internal Server Error");
+  }
+});
+
+
 
 // Get random players
 router.get("/getRandomPlayers/:reviews_number", function(req, res, next) {
