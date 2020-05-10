@@ -303,9 +303,12 @@ router.get(
         let filters = {};
         if (query_filter === "APPROVALS") filters.review_type = "REP";
         if (query_filter === "DISAPPROVALS") filters.review_type = "FLAME";
-        const reviews = await Review.paginate(
-          { gamer_id: gamers[0].gamer_id, ...filters },
-          {
+        const reviews = await Review.paginate({
+            gamer_id: gamers[0].gamer_id,
+            ...filters, 
+          },{
+            reports: 0,
+            select: ['-reports'],
             page: query_page,
             limit: query_limit,
             sort: { date: query_sort }
