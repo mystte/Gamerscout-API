@@ -17,6 +17,13 @@ var reviewSchema = new Schema({
 			name: { type: String, required: true },
 			type: { type: String }
 		}
+	],
+	reports: [
+		{
+			reviewerId: { type: String, required: true },
+			reason: { type: String, default: null },
+			date: { type: Date, default: Date.now },
+		}
 	]
 }, { usePushEach: true });
 reviewSchema.plugin(mongoosePaginate);
