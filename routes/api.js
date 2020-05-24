@@ -4,6 +4,7 @@ const config = require("../config");
 const router = express.Router();
 const requests = require("../utils/requests");
 const Gamer = require("../models/gamer");
+const Newsletter = require("../models/newsletter");
 const Review = require("../models/review");
 const Tag = require("../models/tag");
 const logic_lol = require("../logics/lol");
@@ -36,41 +37,41 @@ const API_TYPE = {
   LOL: 0,
   STEAM: 1,
   PSN: 2,
-  XBOX: 3
+  XBOX: 3,
 };
 
 // Insert tags into the DB
-router.post("/tags", function(req, res, next) {
+router.post("/tags", function (req, res, next) {
   const secret_token = req.body.secret_token;
   const tags = req.body.tags;
   Q()
-    .then(function() {
+    .then(function () {
       for (var i = 0; i < tags.length; i++) {
         var newTag = new Tag({
           name: tags[i].name,
-          type: tags[i].type
+          type: tags[i].type,
         });
         newTag.save();
       }
       res.status(201).json({ message: "Tags Created" });
     })
-    .catch(function(reason) {
+    .catch(function (reason) {
       console.log(reason);
       res.status(500).json({ err: "Internal Server Error" });
     });
 });
 
 // Retrieve available tags
-router.get("/attributes", function(req, res, next) {
+router.get("/attributes", function (req, res, next) {
   // if (!req.session._id) {
   //     res.status(403).json({err : "Forbidden"});
   //     return;
   // }
   Q()
-    .then(function() {
+    .then(function () {
       return Tag.find();
     })
-    .then(function(tags, err) {
+    .then(function (tags, err) {
       if (err) {
         console.log(err);
         return res.status(500).json("Internal Server Error");
@@ -78,7 +79,7 @@ router.get("/attributes", function(req, res, next) {
         return res.status(200).json({ attributes: tags });
       }
     })
-    .catch(function(reason) {
+    .catch(function (reason) {
       console.log(reason);
       return res.status(500).json("Internal Server Error");
     });
@@ -88,8 +89,8 @@ const hasUserAlreadyReviewed = (loggedInuserId = null, gamerId) => {
   if (!loggedInuserId) return false;
   return Review.findOne({
     gamer_id: gamerId,
-    reviewer_id: loggedInuserId
-  }).then(review => {
+    reviewer_id: loggedInuserId,
+  }).then((review) => {
     return review !== null;
   });
 };
@@ -103,7 +104,7 @@ const getUsersFromReviews = async (reviews, email) => {
     newReviews.push(
       new Promise((resolve, reject) => {
         User.findOne({ _id: new ObjectId(newReview.reviewer_id) }).then(
-          user => {
+          (user) => {
             newReview.username = user ? user.username : null;
             newReview.date_since = date_tools.timeSince(newReview.date);
             newReview.gamertag = reviewedGamer ? reviewedGamer.gamertag : null;
@@ -117,7 +118,7 @@ const getUsersFromReviews = async (reviews, email) => {
   return Promise.all(newReviews);
 };
 
-const getReviewerNameInReviews = function(gamers, reviews, loggedInuserId) {
+const getReviewerNameInReviews = function (gamers, reviews, loggedInuserId) {
   const newGamers = [];
   for (i = 0; i < gamers.length; i++) {
     let newGamer = JSON.parse(JSON.stringify(gamers[i]));
@@ -126,7 +127,7 @@ const getReviewerNameInReviews = function(gamers, reviews, loggedInuserId) {
         .then(() => {
           return getUsersFromReviews(reviews.docs);
         })
-        .then(async updatedReviews => {
+        .then(async (updatedReviews) => {
           newGamer.hasReviewed = await hasUserAlreadyReviewed(
             loggedInuserId,
             newGamer.gamer_id
@@ -135,7 +136,7 @@ const getReviewerNameInReviews = function(gamers, reviews, loggedInuserId) {
           newGamer.attributes = logic_lol.computeAttributes(reviews.docs);
           newGamer.reviews_data = {
             pages: reviews.pages,
-            page: reviews.page
+            page: reviews.page,
           };
           return newGamer;
         })
@@ -144,7 +145,7 @@ const getReviewerNameInReviews = function(gamers, reviews, loggedInuserId) {
   return Q.all(newGamers);
 };
 
-const parsedGamersProfilePictures = gamers => {
+const parsedGamersProfilePictures = (gamers) => {
   const newGamers = [];
   for (i = 0; i < gamers.length; i++) {
     let newGamer = JSON.parse(JSON.stringify(gamers[i]));
@@ -153,7 +154,7 @@ const parsedGamersProfilePictures = gamers => {
         .then(() => {
           return requests.do_get_request(newGamer.profile_picture);
         })
-        .then(response => {
+        .then((response) => {
           if (response.statusCode === 403) {
             newGamer.profile_picture =
               "https://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/26.png";
@@ -165,7 +166,7 @@ const parsedGamersProfilePictures = gamers => {
   return Q.all(newGamers);
 };
 
-const gerUsernameRegexpForSearch = gamertag => {
+const gerUsernameRegexpForSearch = (gamertag) => {
   let regex = "";
   for (var i = 0; i < gamertag.length; i++) {
     regex += gamertag[i];
@@ -174,7 +175,7 @@ const gerUsernameRegexpForSearch = gamertag => {
   return regex;
 };
 
-router.get("/config", function(req, res, next) {
+router.get("/config", function (req, res, next) {
   const lol_regions_short = logic_lol.get_regions_short();
   res.status(200).json({
     facebookAppId:
@@ -186,32 +187,32 @@ router.get("/config", function(req, res, next) {
       riot: {
         regions_short: lol_regions_short,
         regions: logic_lol.regions,
-        verbose: logic_lol.regions_verbose
-      }
-    }
+        verbose: logic_lol.regions_verbose,
+      },
+    },
   });
 });
 
-router.get("/reviews/latest", function(req, res, next) {
+router.get("/reviews/latest", function (req, res, next) {
   Review.find()
     .sort({ date: -1 })
     .limit(2)
-    .then(async reviews => {
+    .then(async (reviews) => {
       const updatedReviews = await getUsersFromReviews(reviews);
       res.status(200).json(updatedReviews);
     })
-    .catch(error => {
+    .catch((error) => {
       console.log(error);
       res.status(500).json({ error: { msg: "Internal Server Error" } });
     });
 });
 
-router.get("/test/:wtv/:wtv2", async function(req, res, next) {
+router.get("/test/:wtv/:wtv2", async function (req, res, next) {
   // const result = await logic_lol.getGamerStats('na1', req.params.wtv, req.params.wtv2);
   res.status(200).json({ msg: "OKAY", result: null });
 });
 
-router.get("/email_validation/:email", function(req, res, next) {
+router.get("/email_validation/:email", function (req, res, next) {
   var email = req.params.email ? req.params.email : null;
   if (!email) {
     res
@@ -221,17 +222,17 @@ router.get("/email_validation/:email", function(req, res, next) {
 
   if (email_tools.validateEmail(email)) {
     User.findOne({ email: email })
-      .then(result => {
+      .then((result) => {
         if (!result) {
           res.status(201).json({ statusCode: 201, message: "OK" });
         } else {
           res.status(400).json({
             statusCode: 400,
-            error: { msg: "Email address already exists" }
+            error: { msg: "Email address already exists" },
           });
         }
       })
-      .catch(error => {
+      .catch((error) => {
         res
           .status(500)
           .json({ statusCode: 500, error: { msg: "Internal Server Error" } });
@@ -270,7 +271,7 @@ router.get(
 
     try {
       const platformDetails = config.supported_platforms.find(
-        p => p.name === platform
+        (p) => p.name === platform
       );
       if (!platformDetails || !platformDetails.enabled)
         throw new Error("Not supported Platform");
@@ -279,7 +280,7 @@ router.get(
           "^" + gerUsernameRegexpForSearch(gamertag) + "$",
           "i"
         ),
-        region: region
+        region: region,
       };
       let gamers = await Gamer.find(gamerOptions);
       let gamerJSON;
@@ -308,7 +309,7 @@ router.get(
           {
             page: query_page,
             limit: query_limit,
-            sort: { date: query_sort }
+            sort: { date: query_sort },
           }
         );
         logic_lol.computeAttributes(reviews.docs);
@@ -323,7 +324,7 @@ router.get(
       const regionId = logic_lol.regions[region];
       const {
         aggregateStats,
-        allMatchData
+        allMatchData,
       } = await logic_lol.getMatchAggregateStatsByChampion(
         regionId,
         gamerOutline[0].account_id
@@ -353,10 +354,10 @@ router.get(
         gameStartTime,
         gameLength,
         blue,
-        red
+        red,
       };
       const rawRoles = allMatchData
-        .map(m => {
+        .map((m) => {
           if (!m || !m.player || !m.player.stats) return null;
           const { kills, assists, deaths, win } = m.player.stats;
           return {
@@ -364,7 +365,7 @@ router.get(
             kills,
             assists,
             deaths,
-            win
+            win,
           };
         })
         .reduce((acc, curr) => {
@@ -377,7 +378,7 @@ router.get(
               win: Number(curr.win),
               deaths: curr.deaths,
               assists: curr.assists,
-              loss: Number(!curr.win)
+              loss: Number(!curr.win),
             };
           } else {
             acc[lane].count += 1;
@@ -402,7 +403,7 @@ router.get(
             deaths,
             assists,
             winPercentage: win / (win + loss),
-            kda: kills + assists / deaths
+            kda: kills + assists / deaths,
           };
           return acc;
         }, {});
@@ -416,11 +417,11 @@ router.get(
           kills: 0,
           deaths: 0,
           assists: 0,
-          winPercentage: 0
+          winPercentage: 0,
         };
       }
       const trendData = allMatchData
-        .map(m => {
+        .map((m) => {
           if (!m) return;
           const { kills, deaths, assists } = m.player.stats;
           const { gameCreation, teamKDA } = m;
@@ -435,7 +436,7 @@ router.get(
           }, 0);
           return { cs, kda, gameCreation, teamKDA };
         })
-        .filter(m => m !== null);
+        .filter((m) => m !== null);
 
       gamerOutline[0].stats.trends = _.sortBy(trendData, "gameCreation");
       gamerOutline[0].stats.roles = roles;
@@ -454,7 +455,7 @@ router.get(
 router.get(
   "/:platform/:region/leagues/:league_id",
   cache_success,
-  async function(req, res, next) {
+  async function (req, res, next) {
     var league_id = req.params.league_id ? req.params.league_id : null;
     var platform = req.params.platform ? req.params.platform : null;
     var region = req.params.region ? req.params.region : null;
@@ -469,7 +470,7 @@ router.get(
   }
 );
 
-router.get("/reviews/:gamer_id", function(req, res, next) {
+router.get("/reviews/:gamer_id", function (req, res, next) {
   var query_limit = req.query.limit ? +req.query.limit : 5;
   var query_sort = req.query.sort && req.query.sort === "OLDEST" ? 1 : -1;
   var query_filter =
@@ -481,7 +482,7 @@ router.get("/reviews/:gamer_id", function(req, res, next) {
 
   if (gamer_id) {
     Q()
-      .then(function() {
+      .then(function () {
         let filters = {};
         if (query_filter === "APPROVALS") filters.review_type = "REP";
         if (query_filter === "DISAPPROVALS") filters.review_type = "FLAME";
@@ -489,13 +490,13 @@ router.get("/reviews/:gamer_id", function(req, res, next) {
           .sort({ date: query_sort })
           .limit(query_limit);
       })
-      .then(function(reviews, err) {
+      .then(function (reviews, err) {
         if (err) {
           res.status(400).json({ error: err });
         } else {
           res.status(201).json({
             reviews: reviews,
-            statusCode: 201
+            statusCode: 201,
           });
         }
       });
@@ -505,7 +506,7 @@ router.get("/reviews/:gamer_id", function(req, res, next) {
 });
 
 // Retrieve a gamer profile
-router.get("/gamer/:gamer_id", function(req, res, next) {
+router.get("/gamer/:gamer_id", function (req, res, next) {
   if (!req.session._id) {
     res.status(403).json({ err: "Forbidden" });
     return;
@@ -513,10 +514,10 @@ router.get("/gamer/:gamer_id", function(req, res, next) {
   var gamer_id = req.params.gamer_id ? req.params.gamer_id : null;
 
   Q()
-    .then(function() {
+    .then(function () {
       return Gamer.findOne({ _id: gamer_id });
     })
-    .then(function(gamer, err) {
+    .then(function (gamer, err) {
       if (err) {
         res.status(400).json({ error: err });
       } else if (!gamer) {
@@ -527,7 +528,40 @@ router.get("/gamer/:gamer_id", function(req, res, next) {
     });
 });
 
-router.post("/account/validate", function(req, res, next) {
+router.post("/newsletter", async function (req, res, next) {
+  const email = req.body.email ? req.body.email : null;
+  const subscribed =
+    req.body.subscribed === true || req.body.subscribed === false
+      ? req.body.subscribed
+      : null;
+
+  if (!email) res.status(400).json({ error: "errMissingEmail" });
+  if (subscribed === null)
+    res.status(400).json({ error: "errMissingSubscribed" });
+
+  const newsletter = await Newsletter.findOne({ email: email });
+  if (
+    newsletter &&
+    newsletter.email &&
+    newsletter.subscribed &&
+    subscribed === true
+  )
+    return res.status(400).json({ error: "errAlreadySubscribed" });
+  else if (newsletter && newsletter.email) {
+    newsletter.subscribed = subscribed;
+    newsletter.save();
+    res.status(201).json({ msg: "success" });
+  } else {
+    const newEntry = new Newsletter({
+      email,
+      subscribed: true,
+    });
+    newEntry.save();
+    res.status(201).json({ msg: "success" });
+  }
+});
+
+router.post("/account/validate", function (req, res, next) {
   var token = req.body.token ? req.body.token : null;
 
   if (!token) res.status(400).json({ error: "errMissingToken" });
@@ -550,7 +584,7 @@ router.post("/account/validate", function(req, res, next) {
 });
 
 // Post a review for a specific gamer
-router.post("/gamer/review", function(req, res, next) {
+router.post("/gamer/review", function (req, res, next) {
   if (!req.session._id) {
     res.status(403).json({ err: "Forbidden" });
     return;
@@ -561,17 +595,17 @@ router.post("/gamer/review", function(req, res, next) {
   var review_type = req.body.review_type ? req.body.review_type : null;
 
   Q()
-    .then(function() {
+    .then(function () {
       return Gamer.findOne({ gamer_id: gamer_id });
     })
-    .then(function(gamer, err) {
+    .then(function (gamer, err) {
       if (err) {
         res.status(400).json({ error: err });
       } else if (!gamer) {
         res.status(404).json({ error: "Gamer Not Found" });
       } else {
         return Q()
-          .then(function() {
+          .then(function () {
             return logic_lol.postReview(
               gamer,
               comment,
@@ -580,7 +614,7 @@ router.post("/gamer/review", function(req, res, next) {
               req.session._id
             );
           })
-          .then(function(result) {
+          .then(function (result) {
             if (environment === "production")
               slack.slackNotificationForReview(
                 "`" +
@@ -593,130 +627,124 @@ router.post("/gamer/review", function(req, res, next) {
               );
             res.status(result.status).json(result.data);
           })
-          .catch(reason => {
+          .catch((reason) => {
             console.log("reason", reason);
             res.status(500).json("Internal Server Error");
           });
       }
     })
-    .catch(reason => {
+    .catch((reason) => {
       console.log("reason", reason);
       res.status(500).json("Internal Server Error");
     });
 });
 
 // Get random players
-router.get("/getRandomPlayers/:reviews_number", function(req, res, next) {
+router.get("/getRandomPlayers/:reviews_number", function (req, res, next) {
   // Get three reviews by default
   var reviews_number = req.params.reviews_number
     ? +req.params.reviews_number
     : 3;
   Q()
-    .then(function() {
+    .then(function () {
       return Gamer.aggregate([{ $sample: { size: reviews_number } }]);
     })
-    .then(function(result, err) {
+    .then(function (result, err) {
       if (!result.length > 0) {
         res.status(200).json({ gamers: result });
         return;
       }
       res.status(200).json({ gamers: result });
     })
-    .catch(function(reason) {
+    .catch(function (reason) {
       console.log(reason);
       res.status(500).json("Internal Server Error");
     });
 });
 
 //Get 5 recent reviews
-router.get("/getRecentReviews", function(req, res, next) {
+router.get("/getRecentReviews", function (req, res, next) {
   Q()
-    .then(function() {
-      return Gamer.find({})
-        .sort({ _id: -1 })
-        .limit(5);
+    .then(function () {
+      return Gamer.find({}).sort({ _id: -1 }).limit(5);
     })
-    .then(result => {
+    .then((result) => {
       return parsedGamersProfilePictures(result);
     })
-    .then(function(result) {
+    .then(function (result) {
       if (!result.length > 0) {
         res.status(200).json({ gamers: result });
         return;
       }
       res.status(200).json({ gamers: result });
     })
-    .catch(function(reason) {
+    .catch(function (reason) {
       console.log(reason);
       res.status(500).json("Internal Server Error");
     });
 });
 
 //Get 5 most reviewed players
-router.get("/getMostReviewed", function(req, res, next) {
+router.get("/getMostReviewed", function (req, res, next) {
   Q()
-    .then(function() {
-      return Gamer.find({})
-        .sort({ review_count: -1 })
-        .limit(5);
+    .then(function () {
+      return Gamer.find({}).sort({ review_count: -1 }).limit(5);
     })
-    .then(result => {
+    .then((result) => {
       return parsedGamersProfilePictures(result);
     })
-    .then(function(result, err) {
+    .then(function (result, err) {
       if (!result.length > 0) {
         res.status(200).json({ gamers: result });
         return;
       }
       res.status(200).json({ gamers: result });
     })
-    .catch(function(reason) {
+    .catch(function (reason) {
       console.log(reason);
       res.status(500).json("Internal Server Error");
     });
 });
 
 //Get 5 most highly rated players
-router.get("/getHighestRated", function(req, res, next) {
+router.get("/getHighestRated", function (req, res, next) {
   Q()
-    .then(function() {
-      return Gamer.find({})
-        .sort({ rep_review_count: -1 })
-        .limit(5);
+    .then(function () {
+      return Gamer.find({}).sort({ rep_review_count: -1 }).limit(5);
     })
-    .then(result => {
+    .then((result) => {
       return parsedGamersProfilePictures(result);
     })
-    .then(function(result, err) {
+    .then(function (result, err) {
       if (!result.length > 0) {
         res.status(200).json({ gamers: result });
         return;
       }
       res.status(200).json({ gamers: result });
     })
-    .catch(function(reason) {
+    .catch(function (reason) {
       console.log(reason);
       res.status(500).json("Internal Server Error");
     });
 });
 
 // Get random reviews
-router.get("/getRandomReviews/:reviews_number", function(req, res, next) {
+router.get("/getRandomReviews/:reviews_number", function (req, res, next) {
   // Get three reviews by default
   var reviews_number = req.params.reviews_number
     ? req.params.reviews_number
     : 3;
   Q()
-    .then(function() {
+    .then(function () {
       return Gamer.aggregate([
         { $match: { reviews: { $gt: [] } } },
-        { $sample: { size: 1 } }
+        { $sample: { size: 1 } },
       ]);
     })
-    .then(result => {
+    .then((result) => {
       return parsedGamersProfilePictures(result);
     })
-    .then(function(gamer, err) {
+    .then(function (gamer, err) {
       if (!gamer.length > 0) {
         res.status(200).json({ reviews: [] });
         return;
@@ -724,14 +752,14 @@ router.get("/getRandomReviews/:reviews_number", function(req, res, next) {
       var reviews = array_tools.getRandomRows(gamer[0].reviews, 3);
       res.status(200).json({ reviews: reviews });
     })
-    .catch(function(reason) {
+    .catch(function (reason) {
       console.log(reason);
       res.status(500).json("Internal Server Error");
     });
 });
 
 /* request steam api based on the username */
-router.get("/steam/:username", function(req, res) {
+router.get("/steam/:username", function (req, res) {
   if (!req.session._id) {
     res.status(403).json({ err: "Forbidden" });
     return;
@@ -741,7 +769,7 @@ router.get("/steam/:username", function(req, res) {
     "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=" +
     steamDeveloperKey +
     "&steamids=76561197960435530";
-  request(url, function(error, response, body) {
+  request(url, function (error, response, body) {
     if (!error && response.statusCode === 200) {
       var data = JSON.parse(body);
       res.json(200, data);
