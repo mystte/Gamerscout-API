@@ -861,11 +861,24 @@ const getRecentMatchList = async (region, accountId) => {
 
 const getLiveMatchForPlayer = async (region, accountId) => {
   try {
-    const liveUrl = `https://${region}.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/${accountId}?api_key=${constants.LOL_API_KEY}`;
+    const regionId = regions[region];
+    const liveUrl = `https://${regionId}.api.riotgames.com/lol/spectator/${config.lol_api.version}/active-games/by-summoner/${accountId}?api_key=${constants.LOL_API_KEY}`;
     const { data } = await axios.get(liveUrl);
     return data;
   } catch (err) {
     log.error(`No live match found for this user: ${err}`);
+    return {};
+  }
+};
+
+const getRankedData = async (region, gamerId) => {
+  try {
+    const regionId = regions[region];
+    const path = `https://${regionId}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
+    const { data } = await axios.get(path);
+    return data;
+  } catch(err){
+    log.error(err)
     return {};
   }
 };
@@ -981,12 +994,6 @@ const getMatchAggregateStatsByChampion = async (region, accountId) => {
     log.error(`Error: ${err}`);
     return {};
   }
-};
-
-const getRankedData = async (region, gamerId) => {
-  const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
-  const { data } = await axios.get(path);
-  return data;
 };
 
 // Request for a specific lol gamertag (DEPRECATED)
