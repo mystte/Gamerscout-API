@@ -343,21 +343,8 @@ router.get(
         regionId,
         gamerOutline[0].gamer_id
       );
-      const blue = ((liveData || {}).participants || []).filter(
-        ({ teamId }) => teamId === 100
-      );
-      const red = ((liveData || {}).participants || []).filter(
-        ({ teamId }) => teamId === 200
-      );
-      const { gameMode, gameType, gameStartTime, gameLength } = liveData || {};
-      const live = {
-        gameMode,
-        gameType,
-        gameStartTime,
-        gameLength,
-        blue,
-        red
-      };
+
+      const live = liveData.hasOwnProperty('gameMode');
       const rawRoles = allMatchData
         .map(m => {
           if (!m || !m.player || !m.player.stats) return null;
@@ -471,6 +458,27 @@ router.get(
     }
   }
 );
+
+router.get('/gamer/live/:region/:account_id', async (req, res, next) => {
+  try {
+    const { region, account_id } = req.params;
+    const liveMatchData = await logic_lol.getLiveMatchForPlayer(region, account_id);
+    res.status(201).json(liveMatchData);
+  } catch(err) {
+    log.error(err)
+    res.status(500).json("Internal Server Error");
+  }
+});
+
+router.get('/gamer/rank/:region/account_id', async function(req, res, next) {
+  try {
+  const { region, account_id } = req.params;
+  const data = await logic_lol.getRankedData(region, account_id)
+  res.status(200).json(data)
+  } catch(err){
+    res.status(500).json("Internal Server Error");
+  }
+});
 
 router.get("/reviews/:gamer_id", function(req, res, next) {
   var query_limit = req.query.limit ? +req.query.limit : 5;
