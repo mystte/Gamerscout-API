@@ -749,6 +749,7 @@ const getRecentMatchData = async (accountId, matchId, region) => {
     gameMode,
     queueId,
   } = matchData;
+
   const { participantId } = participantIdentities.find(
     ({ player }) =>
       player.accountId === accountId || player.currentAccountId === accountId
@@ -861,10 +862,20 @@ const getRecentMatchList = async (region, accountId) => {
 
 const getLiveMatchForPlayer = async (region, accountId) => {
   try {
-    const regionId = regions[region];
+    const regionId = regions[region] ? regions[region] : region;
     const liveUrl = `https://${regionId}.api.riotgames.com/lol/spectator/${config.lol_api.version}/active-games/by-summoner/${accountId}?api_key=${constants.LOL_API_KEY}`;
-    const { data } = await axios.get(liveUrl);
-    return data;
+    const liveData = await axios.get(liveUrl);
+    const { gameQueueConfigId, participants } = liveData.data;
+    const queueType = queueTypes.find(({queueId}) => queueId === gameQueueConfigId).id;
+    const participantsWithRanks = await Promise.all(
+      participants.map(async p => {
+        const rankedData = await getRankedData(regionId, p.summonerId);
+        p['rank'] = rankedData.find((rank) => rank.queueType === 'RANKED_SOLO_5x5');
+        return p;
+      })
+    );
+    liveData.data.participants = participantsWithRanks;
+    return liveData.data;
   } catch (err) {
     log.error(`No live match found for this user: ${err}`);
     return {};
@@ -873,8 +884,7 @@ const getLiveMatchForPlayer = async (region, accountId) => {
 
 const getRankedData = async (region, gamerId) => {
   try {
-    const regionId = regions[region];
-    const path = `https://${regionId}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
+    const path = `https://${region}.api.riotgames.com/lol/league/${config.lol_api.version}/entries/by-summoner/${gamerId}?api_key=${constants.LOL_API_KEY}`;
     const { data } = await axios.get(path);
     return data;
   } catch(err){

@@ -341,21 +341,7 @@ router.get(
         gamerOutline[0].gamer_id
       );
 
-      const blue = ((liveData || {}).participants || []).filter(
-        ({ teamId }) => teamId === 100
-      );
-      const red = ((liveData || {}).participants || []).filter(
-        ({ teamId }) => teamId === 200
-      );
-      const { gameMode, gameType, gameStartTime, gameLength } = liveData || {};
-      const live = {
-        gameMode,
-        gameType,
-        gameStartTime,
-        gameLength,
-        blue,
-        red
-      };
+      const live = liveData.hasOwnProperty('gameMode');
       const rawRoles = allMatchData
         .map(m => {
           if (!m || !m.player || !m.player.stats) return null;
